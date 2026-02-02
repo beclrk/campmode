@@ -53,8 +53,8 @@ export default function LocationSheet({ location, onClose, reviews }: LocationSh
   };
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 z-20 safe-bottom">
-      {/* Backdrop */}
+    <div className="absolute bottom-0 left-0 right-0 z-[1000] safe-bottom">
+      {/* Backdrop - above map panes (Leaflet uses 200-700) */}
       <div 
         className="fixed inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
