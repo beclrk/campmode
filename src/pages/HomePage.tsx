@@ -99,7 +99,7 @@ export default function HomePage() {
         />
       </div>
 
-      {/* Top controls - z-index above Leaflet map panes (400+) */}
+      {/* Top controls - z-[1000] so they sit above Leaflet map panes (200-700) */}
       <div className="absolute top-0 left-0 right-0 z-[1000] safe-top">
         <div className="bg-gradient-to-b from-neutral-950/90 via-neutral-950/60 to-transparent pb-8 pt-4 px-4">
           {/* Search row */}
