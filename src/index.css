@@ -31,6 +31,14 @@ body {
   display: none;
 }
 
+/* Touch-friendly scroll for sheets on mobile */
+.sheet-scroll {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
 /* Custom Leaflet marker styles */
 .leaflet-container {
   background: #1a1a1a;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Location, Review } from '@/types';
 import { 
   X, 
@@ -24,11 +24,52 @@ interface LocationSheetProps {
   reviews: Review[];
 }
 
+const DRAG_CLOSE_THRESHOLD = 100;
+
 export default function LocationSheet({ location, onClose, reviews }: LocationSheetProps) {
   const [isReviewsOpen, setIsReviewsOpen] = useState(false);
   const [showAllFacilities, setShowAllFacilities] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const dragStartY = useRef(0);
+  const currentOffsetRef = useRef(0);
+  const handleRef = useRef<HTMLDivElement>(null);
 
   const typeColor = getLocationTypeColor(location.type);
+
+  useEffect(() => {
+    const el = handleRef.current;
+    if (!el) return;
+    const onMove = (e: PointerEvent) => {
+      const dy = e.clientY - dragStartY.current;
+      if (dy > 0) {
+        currentOffsetRef.current = dy;
+        setDragOffset(dy);
+      }
+    };
+    const onUp = () => {
+      const offset = currentOffsetRef.current;
+      if (offset >= DRAG_CLOSE_THRESHOLD) onClose();
+      setDragOffset(0);
+      currentOffsetRef.current = 0;
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+    };
+    const onDown = (e: PointerEvent) => {
+      dragStartY.current = e.clientY;
+      currentOffsetRef.current = 0;
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+      document.addEventListener('pointercancel', onUp);
+    };
+    el.addEventListener('pointerdown', onDown);
+    return () => {
+      el.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+    };
+  }, [onClose]);
   const TypeIcon = location.type === 'campsite' ? Tent : location.type === 'ev_charger' ? Zap : Coffee;
   
   const visibleFacilities = showAllFacilities ? location.facilities : location.facilities.slice(0, 6);
@@ -60,10 +101,20 @@ export default function LocationSheet({ location, onClose, reviews }: LocationSh
         onClick={onClose}
       />
       
-      {/* Sheet */}
-      <div className="relative bg-neutral-900 rounded-t-3xl max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom duration-300">
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-2">
+      {/* Sheet - drag down to close */}
+      <div
+        className="relative bg-neutral-900 rounded-t-3xl max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom duration-300 transition-transform"
+        style={{ transform: dragOffset > 0 ? `translateY(${dragOffset}px)` : undefined }}
+      >
+        {/* Handle - drag down to dismiss */}
+        <div
+          ref={handleRef}
+          role="button"
+          tabIndex={0}
+          className="flex justify-center pt-3 pb-2 touch-none cursor-grab active:cursor-grabbing select-none"
+          style={{ touchAction: 'none' }}
+          aria-label="Drag down to close"
+        >
           <div className="w-10 h-1 bg-neutral-700 rounded-full" />
         </div>
 
@@ -71,12 +122,13 @@ export default function LocationSheet({ location, onClose, reviews }: LocationSh
         <button
           onClick={onClose}
           className="absolute top-4 right-4 w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center hover:bg-neutral-700 transition-colors z-10"
+          aria-label="Close"
         >
           <X className="w-4 h-4 text-neutral-400" />
         </button>
 
-        {/* Content */}
-        <div className="px-5 pb-8 overflow-y-auto max-h-[calc(85vh-40px)] hide-scrollbar">
+        {/* Content - scrollable; pb-28 so bottom isn't hidden behind app promo banner on mobile */}
+        <div className="px-5 pb-28 overflow-y-auto max-h-[calc(85vh-40px)] hide-scrollbar sheet-scroll min-h-0">
           {/* Header */}
           <div className="flex items-start gap-4 mb-4">
             <div 
