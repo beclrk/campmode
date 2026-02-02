@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/hooks/useAuth';
+import AppPromoBanner from '@/components/AppPromoBanner';
 import HomePage from '@/pages/HomePage';
 import SettingsPage from '@/pages/SettingsPage';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
@@ -25,6 +26,8 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppRoutes />
+        {/* Only "open in app" prompt on the site — shows on web only, not in native iOS/Android app */}
+        <AppPromoBanner />
       </AuthProvider>
     </BrowserRouter>
   );
