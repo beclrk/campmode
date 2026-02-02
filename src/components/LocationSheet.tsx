@@ -29,45 +29,73 @@ const DRAG_CLOSE_THRESHOLD = 100;
 export default function LocationSheet({ location, onClose, reviews }: LocationSheetProps) {
   const [isReviewsOpen, setIsReviewsOpen] = useState(false);
   const [showAllFacilities, setShowAllFacilities] = useState(false);
-  const [dragOffset, setDragOffset] = useState(0);
+  const handleRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef(0);
   const currentOffsetRef = useRef(0);
-  const handleRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number | null>(null);
 
   const typeColor = getLocationTypeColor(location.type);
 
   useEffect(() => {
-    const el = handleRef.current;
-    if (!el) return;
+    const handleEl = handleRef.current;
+    const sheetEl = sheetRef.current;
+    if (!handleEl || !sheetEl) return;
+
     const onMove = (e: PointerEvent) => {
-      const dy = e.clientY - dragStartY.current;
-      if (dy > 0) {
-        currentOffsetRef.current = dy;
-        setDragOffset(dy);
+      e.preventDefault();
+      const dy = Math.max(0, e.clientY - dragStartY.current);
+      currentOffsetRef.current = dy;
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        sheetEl.style.transition = 'none';
+        sheetEl.style.transform = `translateY(${dy}px)`;
+        rafRef.current = null;
+      });
+    };
+
+    const onUp = (e: PointerEvent) => {
+      try { handleEl.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+      document.removeEventListener('pointermove', onMove, true);
+      document.removeEventListener('pointerup', boundUp, true);
+      document.removeEventListener('pointercancel', boundUp, true);
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
       }
-    };
-    const onUp = () => {
       const offset = currentOffsetRef.current;
-      if (offset >= DRAG_CLOSE_THRESHOLD) onClose();
-      setDragOffset(0);
-      currentOffsetRef.current = 0;
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
-      document.removeEventListener('pointercancel', onUp);
+      if (offset >= DRAG_CLOSE_THRESHOLD) {
+        onClose();
+        sheetEl.style.transition = '';
+        sheetEl.style.transform = '';
+        return;
+      }
+      sheetEl.style.transition = 'transform 0.25s ease-out';
+      sheetEl.style.transform = 'translateY(0)';
+      const onTransitionEnd = () => {
+        sheetEl.removeEventListener('transitionend', onTransitionEnd);
+        sheetEl.style.transition = '';
+      };
+      sheetEl.addEventListener('transitionend', onTransitionEnd);
     };
+    const boundUp = (e: PointerEvent) => onUp(e);
+
     const onDown = (e: PointerEvent) => {
       dragStartY.current = e.clientY;
       currentOffsetRef.current = 0;
-      document.addEventListener('pointermove', onMove);
-      document.addEventListener('pointerup', onUp);
-      document.addEventListener('pointercancel', onUp);
+      try { handleEl.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+      document.addEventListener('pointermove', onMove, { capture: true, passive: false });
+      document.addEventListener('pointerup', boundUp, true);
+      document.addEventListener('pointercancel', boundUp, true);
     };
-    el.addEventListener('pointerdown', onDown);
+
+    handleEl.addEventListener('pointerdown', onDown);
     return () => {
-      el.removeEventListener('pointerdown', onDown);
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
-      document.removeEventListener('pointercancel', onUp);
+      handleEl.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('pointermove', onMove, true);
+      document.removeEventListener('pointerup', boundUp, true);
+      document.removeEventListener('pointercancel', boundUp, true);
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
   }, [onClose]);
   const TypeIcon = location.type === 'campsite' ? Tent : location.type === 'ev_charger' ? Zap : Coffee;
@@ -101,10 +129,10 @@ export default function LocationSheet({ location, onClose, reviews }: LocationSh
         onClick={onClose}
       />
       
-      {/* Sheet - drag down to close */}
+      {/* Sheet - transform updated directly during drag for smooth mobile */}
       <div
-        className="relative bg-neutral-900 rounded-t-3xl max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom duration-300 transition-transform"
-        style={{ transform: dragOffset > 0 ? `translateY(${dragOffset}px)` : undefined }}
+        ref={sheetRef}
+        className="relative bg-neutral-900 rounded-t-3xl max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom duration-300"
       >
         {/* Handle - drag down to dismiss */}
         <div
