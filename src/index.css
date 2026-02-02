@@ -31,12 +31,14 @@ body {
   display: none;
 }
 
-/* Touch-friendly scroll for sheets on mobile */
+/* Touch-friendly scroll for location cards on mobile - swipe to scroll */
 .sheet-scroll {
-  overflow-y: auto;
+  overflow-y: scroll; /* scroll (not auto) so iOS enables momentum scrolling */
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: contain;
+  /* Definite height comes from parent flex; this container must not grow past it */
+  min-height: 0;
 }
 
 /* Custom Leaflet marker styles */

@@ -129,17 +129,17 @@ export default function LocationSheet({ location, onClose, reviews }: LocationSh
         onClick={onClose}
       />
       
-      {/* Sheet - transform updated directly during drag for smooth mobile */}
+      {/* Sheet - flex column so scroll area gets definite height for iOS */}
       <div
         ref={sheetRef}
-        className="relative bg-neutral-900 rounded-t-3xl max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom duration-300"
+        className="relative flex flex-col bg-neutral-900 rounded-t-3xl max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom duration-300"
       >
         {/* Handle - drag down to dismiss */}
         <div
           ref={handleRef}
           role="button"
           tabIndex={0}
-          className="flex justify-center pt-3 pb-2 touch-none cursor-grab active:cursor-grabbing select-none"
+          className="flex-shrink-0 flex justify-center pt-3 pb-2 touch-none cursor-grab active:cursor-grabbing select-none"
           style={{ touchAction: 'none' }}
           aria-label="Drag down to close"
         >
@@ -155,8 +155,8 @@ export default function LocationSheet({ location, onClose, reviews }: LocationSh
           <X className="w-4 h-4 text-neutral-400" />
         </button>
 
-        {/* Content - scrollable; pb-28 so bottom isn't hidden behind app promo banner on mobile */}
-        <div className="px-5 pb-28 overflow-y-auto max-h-[calc(85vh-40px)] hide-scrollbar sheet-scroll min-h-0">
+        {/* Content - flex-1 min-h-0 gives definite height so swipe-to-scroll works on mobile */}
+        <div className="flex-1 min-h-0 px-5 pb-28 hide-scrollbar sheet-scroll">
           {/* Header */}
           <div className="flex items-start gap-4 mb-4">
             <div 
