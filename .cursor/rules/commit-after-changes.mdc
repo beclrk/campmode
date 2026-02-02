@@ -9,7 +9,7 @@ After making any code or config changes in this project, **commit and push** in 
 
 - Run `git add` for the changed files (or `git add .` when appropriate).
 - Run `git commit` with a short, clear message describing what changed.
-- **Then run `git push origin main`** so changes appear on GitHub immediately.
-- Use `required_permissions: ["git_write", "network"]` or `["all"]` for commit + push.
+- **Then run `git push origin main`** so changes appear on GitHub (and Vercel) immediately.
+- **Always use `required_permissions: ["all"]` for both commit and push.** The sandbox blocks access to the macOS Keychain; without `all`, `git push` fails with "could not read Username" and changes stay local.
 
 If the user said they don't want commits/pushes, or asked to only make changes without committing, skip the commit and push.
