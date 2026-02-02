@@ -79,7 +79,7 @@ export async function fetchEvChargersInBounds(bounds: Bounds): Promise<Location[
         lng,
         description: formatOcmDescription(r),
         address: formatOcmAddress(r),
-        facilities: r.Connections?.map((c) => c.ConnectionType?.Title).filter(Boolean).slice(0, 6) || [],
+        facilities: (r.Connections?.map((c) => c.ConnectionType?.Title).filter((t): t is string => typeof t === 'string') ?? []).slice(0, 6),
         images: [],
         website: r.OperatorInfo?.WebsiteURL,
         phone: r.OperatorInfo?.PhonePrimaryContact,
