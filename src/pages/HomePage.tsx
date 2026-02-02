@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import MapView from '@/components/map/MapView';
 import SearchBar from '@/components/SearchBar';
 import FilterPills from '@/components/FilterPills';
@@ -6,6 +7,7 @@ import LocationSheet from '@/components/LocationSheet';
 import UserMenu from '@/components/UserMenu';
 import RoutePlannerPanel from '@/components/RoutePlannerPanel';
 import { useRouteGeometry } from '@/hooks/useRouteGeometry';
+import { useSavedPlaces } from '@/hooks/useSavedPlaces';
 import { sampleLocations } from '@/data/locations';
 import { Location, LocationType, Review } from '@/types';
 import { cn } from '@/lib/utils';
@@ -36,6 +38,8 @@ const sampleReviews: Review[] = [
 ];
 
 export default function HomePage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<LocationType | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
@@ -43,6 +47,17 @@ export default function HomePage() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [routeStops, setRouteStops] = useState<Location[]>([]);
   const [routePanelOpen, setRoutePanelOpen] = useState(false);
+  const { addSaved, removeSaved, isSaved } = useSavedPlaces();
+
+  // Open location card when navigating from Saved Places
+  useEffect(() => {
+    const stateLocation = (location.state as { selectedLocation?: Location } | null)?.selectedLocation;
+    if (stateLocation) {
+      setSelectedLocation(stateLocation);
+      setMapCenter([stateLocation.lat, stateLocation.lng]);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate]);
 
   const addToRoute = useCallback((location: Location) => {
     setRouteStops((prev) =>
@@ -191,6 +206,9 @@ export default function HomePage() {
           isInRoute={isInRoute(selectedLocation)}
           onAddToRoute={() => addToRoute(selectedLocation)}
           onRemoveFromRoute={() => removeFromRoute(selectedLocation)}
+          isSaved={selectedLocation ? isSaved(selectedLocation.id) : false}
+          onSave={() => selectedLocation && addSaved(selectedLocation)}
+          onUnsave={() => selectedLocation && removeSaved(selectedLocation.id)}
         />
       )}
 

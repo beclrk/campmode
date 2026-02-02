@@ -47,7 +47,13 @@ export default function UserMenu() {
 
           {/* Menu items */}
           <div className="py-1">
-            <button className="w-full flex items-center gap-3 px-4 py-2.5 text-neutral-300 hover:bg-neutral-800 transition-colors text-left">
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                navigate('/saved');
+              }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-neutral-300 hover:bg-neutral-800 transition-colors text-left"
+            >
               <Heart className="w-4 h-4" />
               <span>Saved Places</span>
             </button>

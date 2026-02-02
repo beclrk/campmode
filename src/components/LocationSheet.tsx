@@ -8,6 +8,7 @@ import {
   Phone, 
   Navigation, 
   Route,
+  Heart,
   ChevronDown,
   Tent,
   Zap,
@@ -26,11 +27,14 @@ interface LocationSheetProps {
   isInRoute?: boolean;
   onAddToRoute?: () => void;
   onRemoveFromRoute?: () => void;
+  isSaved?: boolean;
+  onSave?: () => void;
+  onUnsave?: () => void;
 }
 
 const DRAG_CLOSE_THRESHOLD = 100;
 
-export default function LocationSheet({ location, onClose, reviews, isInRoute, onAddToRoute, onRemoveFromRoute }: LocationSheetProps) {
+export default function LocationSheet({ location, onClose, reviews, isInRoute, onAddToRoute, onRemoveFromRoute, isSaved, onSave, onUnsave }: LocationSheetProps) {
   const [isReviewsOpen, setIsReviewsOpen] = useState(false);
   const [showAllFacilities, setShowAllFacilities] = useState(false);
   const handleRef = useRef<HTMLDivElement>(null);
@@ -225,6 +229,31 @@ export default function LocationSheet({ location, onClose, reviews, isInRoute, o
               )}
             </div>
           </div>
+
+          {/* Save / Unsave */}
+          {(onSave || onUnsave) && (
+            <div className="mb-4">
+              {isSaved ? (
+                <button
+                  type="button"
+                  onClick={onUnsave}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-red-500/50 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-colors"
+                >
+                  <Heart className="w-4 h-4 fill-current" />
+                  <span className="text-sm font-medium">Saved — tap to remove</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onSave}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-dashed border-neutral-600 text-neutral-300 rounded-xl hover:border-red-500 hover:text-red-400 hover:bg-red-500/5 transition-colors"
+                >
+                  <Heart className="w-4 h-4" />
+                  <span className="text-sm font-medium">Save place</span>
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Add to route / Remove from route */}
           {(onAddToRoute || onRemoveFromRoute) && (
