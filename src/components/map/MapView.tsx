@@ -114,6 +114,12 @@ export default function MapView({
       className="h-full w-full"
       zoomControl={false}
       attributionControl={false}
+      zoomSnap={0.25}
+      zoomDelta={0.25}
+      wheelPxPerZoomLevel={120}
+      inertia={true}
+      inertiaDeceleration={3000}
+      inertiaMaxSpeed={1000}
     >
       {/* Dark map tiles */}
       <TileLayer
