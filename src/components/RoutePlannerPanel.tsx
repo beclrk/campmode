@@ -8,7 +8,7 @@ import {
   ChevronUp,
   ChevronDown,
 } from 'lucide-react';
-import { getLocationTypeLabel } from '@/lib/utils';
+import { cn, getLocationTypeLabel } from '@/lib/utils';
 
 const APPLE_MAPS_BASE = 'https://maps.apple.com/?daddr=';
 const GOOGLE_MAPS_BASE = 'https://www.google.com/maps/dir/?api=1&destination=';
@@ -18,6 +18,7 @@ interface RoutePlannerPanelProps {
   onClose: () => void;
   onRemoveStop: (index: number) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
+  onSelectStop?: (location: Location) => void;
 }
 
 function openInAppleMaps(lat: number, lng: number) {
@@ -33,6 +34,7 @@ export default function RoutePlannerPanel({
   onClose,
   onRemoveStop,
   onReorder,
+  onSelectStop,
 }: RoutePlannerPanelProps) {
   const [showMapsPicker, setShowMapsPicker] = useState(false);
   const nextStop = stops[0];
@@ -122,7 +124,23 @@ export default function RoutePlannerPanel({
             {stops.map((stop, index) => (
               <li
                 key={`${stop.id}-${index}`}
-                className="flex items-center gap-3 p-3 bg-neutral-800/50 rounded-xl"
+                className={cn(
+                  'flex items-center gap-3 p-3 bg-neutral-800/50 rounded-xl',
+                  onSelectStop && 'cursor-pointer hover:bg-neutral-800 transition-colors'
+                )}
+                role={onSelectStop ? 'button' : undefined}
+                tabIndex={onSelectStop ? 0 : undefined}
+                onClick={onSelectStop ? () => onSelectStop(stop) : undefined}
+                onKeyDown={
+                  onSelectStop
+                    ? (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onSelectStop(stop);
+                        }
+                      }
+                    : undefined
+                }
               >
                 <span className="flex-shrink-0 w-7 h-7 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center text-sm font-semibold">
                   {index + 1}
@@ -131,7 +149,7 @@ export default function RoutePlannerPanel({
                   <p className="text-white font-medium truncate">{stop.name}</p>
                   <p className="text-neutral-500 text-xs">{getLocationTypeLabel(stop.type)}</p>
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
                     onClick={() => index > 0 && onReorder(index, index - 1)}

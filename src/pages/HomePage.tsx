@@ -201,6 +201,10 @@ export default function HomePage() {
           onClose={() => setRoutePanelOpen(false)}
           onRemoveStop={removeStopAtIndex}
           onReorder={reorderRoute}
+          onSelectStop={(location) => {
+            setSelectedLocation(location);
+            setRoutePanelOpen(false);
+          }}
         />
       )}
     </div>
