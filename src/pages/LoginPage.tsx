@@ -21,6 +21,19 @@ export default function LoginPage() {
     setMessage(null);
   };
 
+  const setAuthError = (err: string | null) => {
+    if (!err) {
+      setError(null);
+      return;
+    }
+    const lower = err.toLowerCase();
+    if (lower.includes('rate limit') || lower.includes('rate_limit') || lower.includes('too many')) {
+      setError('Too many attempts. Please wait a few minutes and try again.');
+      return;
+    }
+    setError(err);
+  };
+
   // Sign in with Apple (unchanged)
   const handleAppleSignIn = async () => {
     setLoading(true);
@@ -29,7 +42,7 @@ export default function LoginPage() {
       provider: 'apple',
       options: { redirectTo: window.location.origin },
     });
-    if (error) setError(error.message);
+    if (error) setAuthError(error.message);
     setLoading(false);
   };
 
@@ -40,7 +53,7 @@ export default function LoginPage() {
     setError(null);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      setError(error.message);
+      setAuthError(error.message);
       setLoading(false);
       return;
     }
@@ -74,7 +87,7 @@ export default function LoginPage() {
       options: { emailRedirectTo: window.location.origin },
     });
     if (error) {
-      setError(error.message);
+      setAuthError(error.message);
       setLoading(false);
       return;
     }
@@ -100,7 +113,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: window.location.origin,
     });
-    if (error) setError(error.message);
+    if (error) setAuthError(error.message);
     else setMessage('Check your email for a link to reset your password.');
     setLoading(false);
   };
