@@ -4,11 +4,9 @@ import {
   X,
   Route,
   Navigation,
-  GripVertical,
   Trash2,
   ChevronUp,
   ChevronDown,
-  MapPin,
 } from 'lucide-react';
 import { getLocationTypeLabel } from '@/lib/utils';
 
