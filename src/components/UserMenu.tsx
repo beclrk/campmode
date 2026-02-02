@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { LogOut, Settings, Heart } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function UserMenu() {
+  const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -49,7 +51,13 @@ export default function UserMenu() {
               <Heart className="w-4 h-4" />
               <span>Saved Places</span>
             </button>
-            <button className="w-full flex items-center gap-3 px-4 py-2.5 text-neutral-300 hover:bg-neutral-800 transition-colors text-left">
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                navigate('/settings');
+              }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-neutral-300 hover:bg-neutral-800 transition-colors text-left"
+            >
               <Settings className="w-4 h-4" />
               <span>Settings</span>
             </button>
