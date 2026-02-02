@@ -218,11 +218,11 @@ export default function SettingsPage() {
           />
           <SettingsRow
             label="Privacy Policy"
-            onPress={() => window.open('#', '_blank')}
+            onPress={() => navigate('/privacy')}
           />
           <SettingsRow
             label="Terms of Service"
-            onPress={() => window.open('#', '_blank')}
+            onPress={() => navigate('/terms')}
           />
           <SettingsRow
             label="Send feedback"
