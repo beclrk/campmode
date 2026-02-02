@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import '@luomus/leaflet-smooth-wheel-zoom';
 import { Location } from '@/types';
 import { getLocationTypeColor } from '@/lib/utils';
 
@@ -114,12 +115,9 @@ export default function MapView({
       className="h-full w-full"
       zoomControl={false}
       attributionControl={false}
-      zoomSnap={0.25}
-      zoomDelta={0.25}
-      wheelPxPerZoomLevel={120}
-      inertia={true}
-      inertiaDeceleration={3000}
-      inertiaMaxSpeed={1000}
+      scrollWheelZoom={false}
+      smoothWheelZoom={true}
+      smoothSensitivity={1.8}
     >
       {/* Dark map tiles */}
       <TileLayer
