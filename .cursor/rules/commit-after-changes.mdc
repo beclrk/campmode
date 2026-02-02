@@ -1,15 +1,15 @@
 ---
-description: Always commit changes after making them
+description: Always commit and push changes after making them
 alwaysApply: true
 ---
 
-# Commit After Changes
+# Commit and Push After Changes
 
-After making any code or config changes in this project, **always commit them** in the same session.
+After making any code or config changes in this project, **commit and push** in the same session so the user can view changes on GitHub (and Vercel) straight away.
 
 - Run `git add` for the changed files (or `git add .` when appropriate).
 - Run `git commit` with a short, clear message describing what changed.
-- Do **not** push unless the user asks to push or the task explicitly required deploying/pushing (e.g. "push to GitHub").
-- Use `required_permissions: ["git_write"]` or `["all"]` as needed for git commands.
+- **Then run `git push origin main`** so changes appear on GitHub immediately.
+- Use `required_permissions: ["git_write", "network"]` or `["all"]` for commit + push.
 
-If the user said they don't want commits, or asked to only make changes without committing, skip the commit.
+If the user said they don't want commits/pushes, or asked to only make changes without committing, skip the commit and push.
