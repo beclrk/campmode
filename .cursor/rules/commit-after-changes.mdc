@@ -1,0 +1,15 @@
+---
+description: Always commit changes after making them
+alwaysApply: true
+---
+
+# Commit After Changes
+
+After making any code or config changes in this project, **always commit them** in the same session.
+
+- Run `git add` for the changed files (or `git add .` when appropriate).
+- Run `git commit` with a short, clear message describing what changed.
+- Do **not** push unless the user asks to push or the task explicitly required deploying/pushing (e.g. "push to GitHub").
+- Use `required_permissions: ["git_write"]` or `["all"]` as needed for git commands.
+
+If the user said they don't want commits, or asked to only make changes without committing, skip the commit.
