@@ -305,11 +305,28 @@ The location will appear on your map immediately!
 
 ---
 
+## Real-world map data (optional)
+
+The map can show **real campsites, rest stops, and EV chargers** from Google Places and Open Charge Map.
+
+- **Open Charge Map** (EV chargers) works without a key; data loads when you pan/zoom the map.
+- **Google Places** (campsites, rest stops, and EV chargers from Google) needs an API key:
+  1. Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Enable **Places API**.
+  2. Create an API key (Credentials → Create credentials → API key).
+  3. In **Vercel** → your project → Settings → Environment Variables, add:
+     - Name: `GOOGLE_PLACES_API_KEY`
+     - Value: your API key
+  4. Redeploy. The `/api/places` serverless function will then return real data for the visible map area.
+
+Without a Google key, the app uses sample data. For local development with real data, run `vercel dev` so the API route is available.
+
+---
+
 ## Next Steps
 
 Once your app is working:
 
-1. **Add more locations** - Build up your database of campsites, EV chargers, and rest stops
+1. **Add more locations** - Or use real-world data (see above) for campsites, EV chargers, and rest stops
 
 2. **Custom domain** - In Vercel, you can add your own domain like `campmode.co.uk`
 

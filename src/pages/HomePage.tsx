@@ -8,7 +8,9 @@ import UserMenu from '@/components/UserMenu';
 import RoutePlannerPanel from '@/components/RoutePlannerPanel';
 import { useRouteGeometry } from '@/hooks/useRouteGeometry';
 import { useSavedPlaces } from '@/hooks/useSavedPlaces';
+import { usePlacesInBounds } from '@/hooks/usePlacesInBounds';
 import { sampleLocations } from '@/data/locations';
+import type { Bounds } from '@/services/placesApi';
 import { Location, LocationType, Review } from '@/types';
 import { cn } from '@/lib/utils';
 import { Route } from 'lucide-react';
@@ -47,7 +49,9 @@ export default function HomePage() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [routeStops, setRouteStops] = useState<Location[]>([]);
   const [routePanelOpen, setRoutePanelOpen] = useState(false);
+  const [bounds, setBounds] = useState<Bounds | null>(null);
   const { addSaved, removeSaved, isSaved } = useSavedPlaces();
+  const { locations: apiLocations } = usePlacesInBounds(bounds);
 
   // Open location card when navigating from Saved Places
   useEffect(() => {
@@ -90,9 +94,12 @@ export default function HomePage() {
 
   const { positions: routePositions } = useRouteGeometry(userLocation, routeStops);
 
+  // Use real-world data when we have bounds and API returned results; otherwise sample data
+  const baseLocations = (bounds && apiLocations.length > 0) ? apiLocations : sampleLocations;
+
   // Filter locations
   const filteredLocations = useMemo(() => {
-    let result = sampleLocations;
+    let result = baseLocations;
 
     // Filter by type
     if (filter !== 'all') {
@@ -111,15 +118,15 @@ export default function HomePage() {
     }
 
     return result;
-  }, [filter, searchQuery]);
+  }, [baseLocations, filter, searchQuery]);
 
   // Count by type
   const counts = useMemo(() => ({
-    all: sampleLocations.length,
-    campsite: sampleLocations.filter((l) => l.type === 'campsite').length,
-    ev_charger: sampleLocations.filter((l) => l.type === 'ev_charger').length,
-    rest_stop: sampleLocations.filter((l) => l.type === 'rest_stop').length,
-  }), []);
+    all: baseLocations.length,
+    campsite: baseLocations.filter((l) => l.type === 'campsite').length,
+    ev_charger: baseLocations.filter((l) => l.type === 'ev_charger').length,
+    rest_stop: baseLocations.filter((l) => l.type === 'rest_stop').length,
+  }), [baseLocations]);
 
   // Get reviews for selected location
   const locationReviews = useMemo(() => {
@@ -149,6 +156,7 @@ export default function HomePage() {
           center={mapCenter}
           userLocation={userLocation}
           routePositions={routePositions}
+          onBoundsChange={setBounds}
         />
       </div>
 

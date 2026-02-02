@@ -15,6 +15,8 @@ export interface Location {
   website?: string;
   phone?: string;
   google_place_id?: string;
+  /** Open Charge Map POI ID – used for "View on Open Charge Map" link when no Google place */
+  ocm_id?: number;
   created_at: string;
   updated_at: string;
 }

@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet
 import L from 'leaflet';
 import { Location } from '@/types';
 import { getLocationTypeColor } from '@/lib/utils';
+import type { Bounds } from '@/services/placesApi';
 
 interface MapViewProps {
   locations: Location[];
@@ -12,6 +13,8 @@ interface MapViewProps {
   userLocation?: [number, number] | null;
   /** Road-following route geometry (from user location through stops). When null, no route line is drawn. */
   routePositions?: [number, number][] | null;
+  /** Called when the visible map bounds change (for loading real-world places in view). */
+  onBoundsChange?: (bounds: Bounds) => void;
 }
 
 // Custom marker icon creator
@@ -73,8 +76,8 @@ function createUserMarker() {
 }
 
 // Component to handle map movements
-function MapController({ center, selectedLocation }: { 
-  center?: [number, number]; 
+function MapController({ center, selectedLocation }: {
+  center?: [number, number];
   selectedLocation: Location | null;
 }) {
   const map = useMap();
@@ -98,6 +101,24 @@ function MapController({ center, selectedLocation }: {
   return null;
 }
 
+function BoundsReporter({ onBoundsChange }: { onBoundsChange: (bounds: Bounds) => void }) {
+  const map = useMap();
+  const report = () => {
+    const b = map.getBounds();
+    const sw = b.getSouthWest();
+    const ne = b.getNorthEast();
+    onBoundsChange({ sw: [sw.lat, sw.lng], ne: [ne.lat, ne.lng] });
+  };
+  useEffect(() => {
+    report();
+    map.on('moveend', report);
+    return () => {
+      map.off('moveend', report);
+    };
+  }, [map, onBoundsChange]);
+  return null;
+}
+
 export default function MapView({
   locations,
   selectedLocation,
@@ -105,6 +126,7 @@ export default function MapView({
   center,
   userLocation,
   routePositions = null,
+  onBoundsChange,
 }: MapViewProps) {
   // UK center
   const defaultCenter: [number, number] = [54.5, -3.5];
@@ -126,6 +148,9 @@ export default function MapView({
 
       {/* Map controller for animations */}
       <MapController center={center} selectedLocation={selectedLocation} />
+
+      {/* Report bounds for loading real-world places */}
+      {onBoundsChange && <BoundsReporter onBoundsChange={onBoundsChange} />}
 
       {/* Route line - follows roads from user location through each stop */}
       {routePositions && routePositions.length >= 2 && (

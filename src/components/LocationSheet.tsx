@@ -387,7 +387,7 @@ export default function LocationSheet({ location, onClose, reviews, isInRoute, o
                   </div>
                 )}
 
-                {/* Google Reviews link */}
+                {/* Google Reviews link (when we have a Google Place ID) */}
                 {location.google_place_id && (
                   <a
                     href={`https://www.google.com/maps/place/?q=place_id:${location.google_place_id}`}
@@ -401,6 +401,19 @@ export default function LocationSheet({ location, onClose, reviews, isInRoute, o
                       className="w-4 h-4"
                     />
                     <span className="text-sm">View Google Reviews</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+
+                {/* Open Charge Map link for EV chargers without Google Place */}
+                {location.type === 'ev_charger' && location.ocm_id && (
+                  <a
+                    href={`https://openchargemap.org/site/poi/details/${location.ocm_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 p-3 bg-neutral-800 rounded-xl text-neutral-300 hover:bg-neutral-700 transition-colors"
+                  >
+                    <span className="text-sm">View on Open Charge Map</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 )}
