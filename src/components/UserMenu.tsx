@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { User, LogOut, Settings, Heart } from 'lucide-react';
+import { LogOut, Settings, Heart } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function UserMenu() {

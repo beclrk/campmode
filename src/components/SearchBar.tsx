@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Search, X, MapPin, Navigation } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface SearchBarProps {
   value: string;
