@@ -21,14 +21,27 @@ export default function LoginPage() {
     setMessage(null);
   };
 
-  const setAuthError = (err: string | null) => {
+  const setAuthError = (err: string | null, context?: 'signin' | 'signup' | 'forgot') => {
     if (!err) {
       setError(null);
       return;
     }
     const lower = err.toLowerCase();
-    if (lower.includes('rate limit') || lower.includes('rate_limit') || lower.includes('too many')) {
-      setError('Too many attempts. Please wait a few minutes and try again.');
+    const isRateLimit = lower.includes('rate limit') || lower.includes('rate_limit') || lower.includes('too many');
+    if (isRateLimit) {
+      if (context === 'signin') {
+        setError('Our auth provider is temporarily limiting requests (often after several sign-ups or password-reset emails). Sign-in with password does not send email—please wait 15–60 minutes and try again.');
+        return;
+      }
+      if (context === 'signup') {
+        setError('Too many sign-ups right now (email limit reached). Wait an hour or log in below if you already have an account.');
+        return;
+      }
+      if (context === 'forgot') {
+        setError('Too many password-reset emails. Please wait at least an hour before requesting another.');
+        return;
+      }
+      setError('Too many attempts. Please wait 15–60 minutes and try again.');
       return;
     }
     setError(err);
@@ -46,14 +59,14 @@ export default function LoginPage() {
     setLoading(false);
   };
 
-  // Sign in with email + password (returning users)
+  // Sign in with email + password (returning users) — does NOT send email
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      setAuthError(error.message);
+      setAuthError(error.message, 'signin');
       setLoading(false);
       return;
     }
@@ -87,7 +100,7 @@ export default function LoginPage() {
       options: { emailRedirectTo: window.location.origin },
     });
     if (error) {
-      setAuthError(error.message);
+      setAuthError(error.message, 'signup');
       setLoading(false);
       return;
     }
@@ -113,7 +126,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: window.location.origin,
     });
-    if (error) setAuthError(error.message);
+    if (error) setAuthError(error.message, 'forgot');
     else setMessage('Check your email for a link to reset your password.');
     setLoading(false);
   };
@@ -142,6 +155,11 @@ export default function LoginPage() {
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-4 text-center">
             <p className="text-red-400 text-sm">{error}</p>
+            {error.toLowerCase().includes('rate limit') || error.toLowerCase().includes('too many') ? (
+              <p className="text-neutral-500 text-xs mt-2">
+                Tip: In Supabase Dashboard → Auth → Providers → Email, turn off &quot;Confirm email&quot; so new sign-ups don&apos;t send email and won&apos;t hit this limit.
+              </p>
+            ) : null}
           </div>
         )}
 
