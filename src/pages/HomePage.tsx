@@ -5,6 +5,7 @@ import FilterPills from '@/components/FilterPills';
 import LocationSheet from '@/components/LocationSheet';
 import UserMenu from '@/components/UserMenu';
 import RoutePlannerPanel from '@/components/RoutePlannerPanel';
+import { useRouteGeometry } from '@/hooks/useRouteGeometry';
 import { sampleLocations } from '@/data/locations';
 import { Location, LocationType, Review } from '@/types';
 import { cn } from '@/lib/utils';
@@ -72,6 +73,8 @@ export default function HomePage() {
     [routeStops]
   );
 
+  const { positions: routePositions } = useRouteGeometry(userLocation, routeStops);
+
   // Filter locations
   const filteredLocations = useMemo(() => {
     let result = sampleLocations;
@@ -130,7 +133,7 @@ export default function HomePage() {
           onLocationSelect={setSelectedLocation}
           center={mapCenter}
           userLocation={userLocation}
-          routeStops={routeStops}
+          routePositions={routePositions}
         />
       </div>
 

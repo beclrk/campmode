@@ -10,7 +10,8 @@ interface MapViewProps {
   onLocationSelect: (location: Location) => void;
   center?: [number, number];
   userLocation?: [number, number] | null;
-  routeStops?: Location[];
+  /** Road-following route geometry (from user location through stops). When null, no route line is drawn. */
+  routePositions?: [number, number][] | null;
 }
 
 // Custom marker icon creator
@@ -103,16 +104,11 @@ export default function MapView({
   onLocationSelect,
   center,
   userLocation,
-  routeStops = [],
+  routePositions = null,
 }: MapViewProps) {
   // UK center
   const defaultCenter: [number, number] = [54.5, -3.5];
   const defaultZoom = 6;
-
-  const routePositions: [number, number][] =
-    routeStops.length >= 2
-      ? routeStops.map((loc) => [loc.lat, loc.lng])
-      : [];
 
   return (
     <MapContainer
@@ -131,8 +127,8 @@ export default function MapView({
       {/* Map controller for animations */}
       <MapController center={center} selectedLocation={selectedLocation} />
 
-      {/* Route line - connects stops in order */}
-      {routePositions.length >= 2 && (
+      {/* Route line - follows roads from user location through each stop */}
+      {routePositions && routePositions.length >= 2 && (
         <Polyline
           positions={routePositions}
           pathOptions={{
