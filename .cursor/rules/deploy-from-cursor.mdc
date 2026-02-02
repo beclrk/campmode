@@ -1,0 +1,18 @@
+---
+description: Run Git and deploy (GitHub, Vercel) from Cursor so the user doesn't need the terminal
+alwaysApply: true
+---
+
+# Deploy from Cursor
+
+When the user asks to commit, push, or deploy (GitHub, Vercel), do it from Cursor:
+
+- **Git**: Run `git init`, `git add .`, `git commit`, `git remote add`, `git push` in the project directory. Use `required_permissions: ["git_write"]` for git writes and `["network"]` for push.
+- **GitHub**: If the repo doesn't exist yet, run `gh repo create campmode --public --source=. --remote=origin --push` (requires `gh` and `network`). Otherwise push with `git push -u origin main`.
+- **Vercel**: Run `vercel` or `vercel --prod` in the project (requires `network`). If the project is already linked, deploy. If not, the user may need to link once in the Vercel dashboard or run `vercel link`.
+
+**One-time requirement**: Git must be installed on the machine (e.g. Xcode Command Line Tools on macOS: `xcode-select --install` in a normal Terminal). If git commands fail with xcode-select errors, tell the user to install the CLI tools once; after that, deployment from Cursor will work.
+
+**Default branch**: Use `main`. Run `git branch -M main` after init if needed before first push.
+
+**Env vars for Vercel**: Use values from `.env.example` for `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` when prompting or configuring Vercel.
