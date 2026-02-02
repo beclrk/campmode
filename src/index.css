@@ -74,3 +74,8 @@ body {
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+/* Location sheet: sit above browser bottom bar (Chrome back/new tab etc.) */
+.location-sheet-wrapper {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 56px);
+}
