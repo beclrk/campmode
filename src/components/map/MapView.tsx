@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Location } from '@/types';
 import { getLocationTypeColor } from '@/lib/utils';
@@ -10,6 +10,7 @@ interface MapViewProps {
   onLocationSelect: (location: Location) => void;
   center?: [number, number];
   userLocation?: [number, number] | null;
+  routeStops?: Location[];
 }
 
 // Custom marker icon creator
@@ -102,10 +103,16 @@ export default function MapView({
   onLocationSelect,
   center,
   userLocation,
+  routeStops = [],
 }: MapViewProps) {
   // UK center
   const defaultCenter: [number, number] = [54.5, -3.5];
   const defaultZoom = 6;
+
+  const routePositions: [number, number][] =
+    routeStops.length >= 2
+      ? routeStops.map((loc) => [loc.lat, loc.lng])
+      : [];
 
   return (
     <MapContainer
@@ -123,6 +130,19 @@ export default function MapView({
 
       {/* Map controller for animations */}
       <MapController center={center} selectedLocation={selectedLocation} />
+
+      {/* Route line - connects stops in order */}
+      {routePositions.length >= 2 && (
+        <Polyline
+          positions={routePositions}
+          pathOptions={{
+            color: '#22c55e',
+            weight: 4,
+            opacity: 0.9,
+            dashArray: '8, 8',
+          }}
+        />
+      )}
 
       {/* Location markers */}
       {locations.map((location) => (

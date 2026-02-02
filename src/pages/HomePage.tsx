@@ -1,11 +1,14 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import MapView from '@/components/map/MapView';
 import SearchBar from '@/components/SearchBar';
 import FilterPills from '@/components/FilterPills';
 import LocationSheet from '@/components/LocationSheet';
 import UserMenu from '@/components/UserMenu';
+import RoutePlannerPanel from '@/components/RoutePlannerPanel';
 import { sampleLocations } from '@/data/locations';
 import { Location, LocationType, Review } from '@/types';
+import { cn } from '@/lib/utils';
+import { Route } from 'lucide-react';
 
 // Sample reviews - in production these come from Supabase
 const sampleReviews: Review[] = [
@@ -37,6 +40,37 @@ export default function HomePage() {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number] | undefined>();
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [routeStops, setRouteStops] = useState<Location[]>([]);
+  const [routePanelOpen, setRoutePanelOpen] = useState(false);
+
+  const addToRoute = useCallback((location: Location) => {
+    setRouteStops((prev) =>
+      prev.some((s) => s.id === location.id) ? prev : [...prev, location]
+    );
+    setRoutePanelOpen(true);
+  }, []);
+
+  const removeFromRoute = useCallback((location: Location) => {
+    setRouteStops((prev) => prev.filter((s) => s.id !== location.id));
+  }, []);
+
+  const removeStopAtIndex = useCallback((index: number) => {
+    setRouteStops((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const reorderRoute = useCallback((fromIndex: number, toIndex: number) => {
+    setRouteStops((prev) => {
+      const next = [...prev];
+      const [removed] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, removed);
+      return next;
+    });
+  }, []);
+
+  const isInRoute = useCallback(
+    (location: Location) => routeStops.some((s) => s.id === location.id),
+    [routeStops]
+  );
 
   // Filter locations
   const filteredLocations = useMemo(() => {
@@ -96,6 +130,7 @@ export default function HomePage() {
           onLocationSelect={setSelectedLocation}
           center={mapCenter}
           userLocation={userLocation}
+          routeStops={routeStops}
         />
       </div>
 
@@ -113,6 +148,25 @@ export default function HomePage() {
                 onClearLocation={handleClearLocation}
               />
             </div>
+            <button
+              type="button"
+              onClick={() => setRoutePanelOpen((o) => !o)}
+              className={cn(
+                'relative flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors',
+                routeStops.length > 0
+                  ? 'bg-green-500/20 text-green-500'
+                  : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white'
+              )}
+              aria-label="Route planner"
+              title="Route planner"
+            >
+              <Route className="w-5 h-5" />
+              {routeStops.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-green-500 text-white text-xs font-semibold flex items-center justify-center">
+                  {routeStops.length}
+                </span>
+              )}
+            </button>
             <UserMenu />
           </div>
 
@@ -131,6 +185,19 @@ export default function HomePage() {
           location={selectedLocation}
           onClose={() => setSelectedLocation(null)}
           reviews={locationReviews}
+          isInRoute={isInRoute(selectedLocation)}
+          onAddToRoute={() => addToRoute(selectedLocation)}
+          onRemoveFromRoute={() => removeFromRoute(selectedLocation)}
+        />
+      )}
+
+      {/* Route planner panel - shows when route has stops and user opens it */}
+      {routePanelOpen && routeStops.length > 0 && (
+        <RoutePlannerPanel
+          stops={routeStops}
+          onClose={() => setRoutePanelOpen(false)}
+          onRemoveStop={removeStopAtIndex}
+          onReorder={reorderRoute}
         />
       )}
     </div>

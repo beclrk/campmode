@@ -7,6 +7,7 @@ import {
   Globe, 
   Phone, 
   Navigation, 
+  Route,
   ChevronDown,
   Tent,
   Zap,
@@ -22,11 +23,14 @@ interface LocationSheetProps {
   location: Location;
   onClose: () => void;
   reviews: Review[];
+  isInRoute?: boolean;
+  onAddToRoute?: () => void;
+  onRemoveFromRoute?: () => void;
 }
 
 const DRAG_CLOSE_THRESHOLD = 100;
 
-export default function LocationSheet({ location, onClose, reviews }: LocationSheetProps) {
+export default function LocationSheet({ location, onClose, reviews, isInRoute, onAddToRoute, onRemoveFromRoute }: LocationSheetProps) {
   const [isReviewsOpen, setIsReviewsOpen] = useState(false);
   const [showAllFacilities, setShowAllFacilities] = useState(false);
   const handleRef = useRef<HTMLDivElement>(null);
@@ -221,6 +225,31 @@ export default function LocationSheet({ location, onClose, reviews }: LocationSh
               )}
             </div>
           </div>
+
+          {/* Add to route / Remove from route */}
+          {(onAddToRoute || onRemoveFromRoute) && (
+            <div className="mb-4">
+              {isInRoute ? (
+                <button
+                  type="button"
+                  onClick={onRemoveFromRoute}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-green-500/50 bg-green-500/10 text-green-500 rounded-xl hover:bg-green-500/20 transition-colors"
+                >
+                  <Route className="w-4 h-4" />
+                  <span className="text-sm font-medium">Remove from route</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onAddToRoute}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-dashed border-neutral-600 text-neutral-300 rounded-xl hover:border-green-500 hover:text-green-500 hover:bg-green-500/5 transition-colors"
+                >
+                  <Route className="w-4 h-4" />
+                  <span className="text-sm font-medium">Add to route</span>
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Action buttons */}
           <div className="grid grid-cols-3 gap-3 mb-6">
