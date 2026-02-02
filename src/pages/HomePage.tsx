@@ -99,8 +99,8 @@ export default function HomePage() {
         />
       </div>
 
-      {/* Top controls */}
-      <div className="absolute top-0 left-0 right-0 z-10 safe-top">
+      {/* Top controls - z-index above Leaflet map panes (400+) */}
+      <div className="absolute top-0 left-0 right-0 z-[1000] safe-top">
         <div className="bg-gradient-to-b from-neutral-950/90 via-neutral-950/60 to-transparent pb-8 pt-4 px-4">
           {/* Search row */}
           <div className="flex items-center gap-3 mb-4">
