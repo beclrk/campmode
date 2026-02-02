@@ -187,29 +187,27 @@ create trigger on_auth_user_created
 
 ## Step 5: Upload Your Code to GitHub
 
-### Option A: Using GitHub Desktop (Easiest)
+Your code is already on GitHub at **github.com/beclrk/campmode** (private repo). If you're setting up from scratch:
+
+- **From Cursor:** Ask the AI to "commit and push" or "create GitHub repo campmode" (see **DEPLOY.md** for one-time Git/gh setup).
+- **Or** use GitHub Desktop or drag-and-drop on github.com as in the options below.
+
+### Option A: From Cursor (after Git + gh are set up)
+
+1. In Cursor, ask: *"Push to GitHub"* or *"Create the campmode repo and push"*
+2. The AI will run `gh repo create campmode --public` (or `--private`) and push
+
+### Option B: Using GitHub Desktop
 
 1. Download **GitHub Desktop** from desktop.github.com
 2. Sign in with your GitHub account
-3. Click **File** → **New Repository**
-4. Name: `campmode`
-5. Choose where to save it on your computer
-6. Click **Create Repository**
-7. Copy all the CampMode-v2 files into that folder
-8. In GitHub Desktop, you'll see all the files listed
-9. Type a message: "Initial commit"
-10. Click **Commit to main**
-11. Click **Publish repository**
+3. **Add** → **Add Existing Repository** → choose your CampMode-v2 folder (if you already ran `git init`), or **New Repository** named `campmode`
+4. Commit and **Publish repository** (or **Push origin**)
 
-### Option B: Drag and Drop on GitHub Website
+### Option C: Create repo on GitHub, then push from terminal/Cursor
 
-1. Go to **github.com**
-2. Click **+** → **New repository**
-3. Name: `campmode`
-4. Click **Create repository**
-5. Click **uploading an existing file**
-6. Drag all CampMode-v2 files into the browser
-7. Click **Commit changes**
+1. Go to **github.com/new** → name: `campmode` → Create (don’t add README)
+2. Tell the AI your GitHub username and ask it to add the remote and push
 
 ---
 
@@ -222,7 +220,7 @@ create trigger on_auth_user_created
 
 ### Add Environment Variables (Important!)
 
-Before clicking Deploy, expand **Environment Variables** and add these two:
+Before clicking Deploy, expand **Environment Variables** and add these two (you can copy the values from **.env.example** in this project):
 
 | Name | Value |
 |------|-------|
