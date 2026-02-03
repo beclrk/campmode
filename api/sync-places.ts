@@ -18,7 +18,6 @@ const GRID_STEP_M = 70000;
 /** UK bounds for sync (same as app default). */
 const SYNC_BOUNDS = { swLat: 49.8, swLng: -8.6, neLat: 60.9, neLng: 1.8 };
 
-type PlaceType = (typeof PLACE_TYPES)[number];
 type ExternalSource = 'google' | 'open_charge_map';
 
 interface GooglePlaceResult {
@@ -258,7 +257,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const { error } = await supabase
       .from('locations')
-      .upsert(allRows, {
+      .upsert(allRows as Record<string, unknown>[], {
         onConflict: ['external_source', 'external_id'],
       });
 
