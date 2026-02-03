@@ -82,6 +82,13 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
   const rafRef = useRef<number | null>(null);
 
   const typeColor = getLocationTypeColor(location.type ?? '');
+  const isAppType = location.type === 'campsite' || location.type === 'ev_charger' || location.type === 'rest_stop';
+  const facilities = Array.isArray(location.facilities) ? location.facilities : [];
+  const genericFacilityLabels = ['point_of_interest', 'point of interest', 'establishment', 'premise', 'subpremise'];
+  const facilitiesFiltered = facilities.filter((f) => {
+    const lower = (f ?? '').toString().toLowerCase().trim();
+    return lower && !genericFacilityLabels.some((g) => lower === g.toLowerCase() || lower.replace(/_/g, ' ') === g.toLowerCase());
+  });
 
   useEffect(() => {
     const handleEl = handleRef.current;
@@ -145,8 +152,8 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
     };
   }, [onClose]);
   const TypeIcon = location.type === 'campsite' ? Tent : location.type === 'ev_charger' ? Zap : Coffee;
-  const facilities = Array.isArray(location.facilities) ? location.facilities : [];
-  const visibleFacilities = showAllFacilities ? facilities : facilities.slice(0, 6);
+  const visibleFacilitiesRaw = showAllFacilities ? facilitiesFiltered : facilitiesFiltered.slice(0, 6);
+  const visibleFacilities = visibleFacilitiesRaw;
   const reviewCount = location.review_count ?? location.user_ratings_total ?? reviews.length;
   const distanceM = userLocation ? calculateDistance(userLocation[0], userLocation[1], location.lat, location.lng) : null;
   const openingHoursLines = formatOpeningHours(location.opening_hours ?? null);
@@ -227,12 +234,14 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
             </div>
             <div className="flex-1 min-w-0 pr-8">
               <div className="flex flex-wrap items-center gap-2 mb-1">
-                <span 
-                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                  style={{ backgroundColor: `${typeColor}20`, color: typeColor }}
-                >
-                  {getLocationTypeLabel(location.type)}
-                </span>
+                {isAppType && (
+                  <span 
+                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                    style={{ backgroundColor: `${typeColor}20`, color: typeColor }}
+                  >
+                    {getLocationTypeLabel(location.type ?? '')}
+                  </span>
+                )}
                 {location.rating != null && (
                   <span className="inline-flex items-center gap-1 text-sm">
                     <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
@@ -257,26 +266,47 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
             </div>
           </div>
 
-          {/* Quick info row: price + facilities as chips */}
-          {(priceLabel || facilities.length > 0) && (
+          {/* Quick info row: price + facilities as chips (exclude generic place-type labels) */}
+          {(priceLabel || facilitiesFiltered.length > 0) && (
             <div className="flex flex-wrap items-center gap-2 mb-4">
               {priceLabel && (
                 <span className="px-2.5 py-1 rounded-lg bg-neutral-800 text-neutral-300 text-sm font-medium">
                   {priceLabel === 'Free' ? '💷 Free' : `💷 ${priceLabel}`}
                 </span>
               )}
-              {facilities.slice(0, 4).map((f, i) => (
+              {facilitiesFiltered.slice(0, 4).map((f, i) => (
                 <span key={i} className="px-2.5 py-1 rounded-lg bg-neutral-800 text-neutral-300 text-sm">
                   {f ?? ''}
                 </span>
               ))}
-              {facilities.length > 4 && (
+              {facilitiesFiltered.length > 4 && (
                 <span className="px-2.5 py-1 rounded-lg bg-neutral-800 text-neutral-400 text-sm">
-                  +{facilities.length - 4}
+                  +{facilitiesFiltered.length - 4}
                 </span>
               )}
             </div>
           )}
+
+          {/* Quick actions: always visible near top (Open in Google, Call) so visible on web without scrolling */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <button
+              type="button"
+              onClick={handleOpenInGoogle}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-medium transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Open in Google
+            </button>
+            {location.phone && (
+              <a
+                href={`tel:${String(location.phone).replace(/\s/g, '')}`}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-medium transition-colors"
+              >
+                <Phone className="w-4 h-4" />
+                Call
+              </a>
+            )}
+          </div>
 
           {/* Address - clickable to open in maps */}
           <div 
@@ -373,12 +403,12 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
                   {facility ?? ''}
                 </span>
               ))}
-              {facilities.length > 6 && !showAllFacilities && (
+              {facilitiesFiltered.length > 6 && !showAllFacilities && (
                 <button
                   onClick={() => setShowAllFacilities(true)}
                   className="px-3 py-1.5 bg-neutral-800 rounded-full text-sm text-green-500 hover:bg-neutral-700 transition-colors"
                 >
-                  +{facilities.length - 6} more
+                  +{facilitiesFiltered.length - 6} more
                 </button>
               )}
             </div>
