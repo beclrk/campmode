@@ -12,7 +12,11 @@ type VercelResponse = {
 export const config = { maxDuration: 300 };
 
 const GOOGLE_PLACES_BASE = 'https://maps.googleapis.com/maps/api/place/textsearch/json';
+const GOOGLE_PLACE_DETAILS_BASE = 'https://maps.googleapis.com/maps/api/place/details/json';
 const OCM_BASE = 'https://api.openchargemap.io/v3/poi/';
+/** Max places to call Place Details on to get up to 5 photos each (cost control). */
+const MAX_PLACE_DETAILS_FOR_PHOTOS = 100;
+const PLACE_DETAILS_DELAY_MS = 100;
 const PLACE_TYPES = ['campground', 'rest_stop', 'electric_vehicle_charging_station'] as const;
 const GOOGLE_MAX_RADIUS_M = 50000;
 const GRID_STEP_M = 70000;
@@ -280,6 +284,34 @@ async function fetchAllGoogleUK(key: string): Promise<{ rows: SupabaseLocationRo
   return { rows: Array.from(byId.values()), requestCount, capReached };
 }
 
+/** Fetch Place Details to get up to 5 photo_references for a place. */
+async function fetchPlaceDetailsPhotos(placeId: string, key: string): Promise<string[]> {
+  const url = `${GOOGLE_PLACE_DETAILS_BASE}?place_id=${encodeURIComponent(placeId)}&key=${key}&fields=photos`;
+  const resp = await fetch(url);
+  const data = (await resp.json()) as { status: string; result?: { photos?: Array<{ photo_reference?: string }> } };
+  if (data.status !== 'OK' || !data.result?.photos) return [];
+  return data.result.photos
+    .map((p) => p.photo_reference)
+    .filter((ref): ref is string => Boolean(ref))
+    .slice(0, 5);
+}
+
+/** Enrich Google rows with up to 5 photos per place via Place Details (capped to limit cost). */
+async function enrichGoogleRowsWithPhotos(rows: SupabaseLocationRow[], key: string): Promise<void> {
+  const toEnrich = rows.filter((r) => r.google_place_id).slice(0, MAX_PLACE_DETAILS_FOR_PHOTOS);
+  for (let i = 0; i < toEnrich.length; i++) {
+    const row = toEnrich[i];
+    const placeId = row.google_place_id!;
+    await sleep(i === 0 ? 0 : PLACE_DETAILS_DELAY_MS);
+    const refs = await fetchPlaceDetailsPhotos(placeId, key);
+    if (refs.length > 0) {
+      row.images = refs.map(
+        (ref) => `/api/place-photo?photo_reference=${encodeURIComponent(ref)}`
+      );
+    }
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -314,6 +346,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       googleRequestCount = result.requestCount;
       if (result.capReached) {
         console.warn('[sync-places] Google Places request cap was hit. Sync continued with partial Google data.');
+      }
+      // Enrich up to MAX_PLACE_DETAILS_FOR_PHOTOS places with up to 5 photos each via Place Details
+      if (googleRows.length > 0) {
+        await enrichGoogleRowsWithPhotos(googleRows, googleKey);
       }
     }
 
