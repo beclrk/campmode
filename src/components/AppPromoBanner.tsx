@@ -50,9 +50,6 @@ export default function AppPromoBanner() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-white font-semibold text-sm">Get the CampMode app</p>
-          <p className="text-neutral-400 text-xs truncate">
-            iOS & Android — maps, saves & more on the go
-          </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <a
