@@ -6,6 +6,8 @@ import { Location } from '@/types';
 import { getLocationTypeColor } from '@/lib/utils';
 import type { Bounds } from '@/services/placesApi';
 
+export type BasemapId = 'default' | 'os-road' | 'os-outdoor' | 'os-light';
+
 interface MapViewProps {
   locations: Location[];
   selectedLocation: Location | null;
@@ -15,6 +17,11 @@ interface MapViewProps {
   routePositions?: [number, number][] | null;
   onBoundsChange?: (bounds: Bounds) => void;
   onZoomChange?: (zoom: number) => void;
+  /** Current basemap; 'default' = Carto dark. OS options require osApiKey. */
+  basemap?: BasemapId;
+  onBasemapChange?: (basemap: BasemapId) => void;
+  /** OS Maps API key (VITE_OS_API_KEY). When set, OS layer options are shown. */
+  osApiKey?: string;
 }
 
 interface ClusterPoint {
@@ -134,6 +141,76 @@ function MapZoomControls() {
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
       </button>
+    </div>
+  );
+}
+
+const OS_LAYERS: { id: BasemapId; layer: string; label: string }[] = [
+  { id: 'os-road', layer: 'Road_3857', label: 'OS Road' },
+  { id: 'os-outdoor', layer: 'Outdoor_3857', label: 'OS Outdoor' },
+  { id: 'os-light', layer: 'Light_3857', label: 'OS Light' },
+];
+
+function MapLayerControl({
+  basemap,
+  onBasemapChange,
+  osApiKey,
+}: {
+  basemap: BasemapId;
+  onBasemapChange?: (basemap: BasemapId) => void;
+  osApiKey?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const hasOs = Boolean(osApiKey?.trim());
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
+  const options: { id: BasemapId; label: string }[] = [
+    { id: 'default', label: 'Default' },
+    ...(hasOs ? OS_LAYERS : []),
+  ];
+
+  return (
+    <div ref={ref} className="absolute bottom-4 left-4 z-[500]">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 px-3 py-2 rounded-xl shadow-lg border border-neutral-700 bg-neutral-900/95 backdrop-blur-sm text-neutral-300 hover:text-white hover:bg-neutral-700 transition-colors text-sm font-medium"
+        aria-label="Map layer"
+        aria-expanded={open}
+      >
+        <span>{basemap === 'default' ? 'Default' : OS_LAYERS.find((l) => l.id === basemap)?.label ?? basemap}</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={open ? 'rotate-180' : ''}>
+          <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute bottom-full left-0 mb-1 w-40 py-1 rounded-xl shadow-lg border border-neutral-700 bg-neutral-900/95 backdrop-blur-sm overflow-hidden">
+          {options.map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => {
+                onBasemapChange?.(opt.id);
+                setOpen(false);
+              }}
+              className={`w-full px-3 py-2 text-left text-sm transition-colors ${
+                basemap === opt.id ? 'bg-green-500/20 text-green-400 font-medium' : 'text-neutral-300 hover:bg-neutral-700 hover:text-white'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -323,9 +400,18 @@ export default function MapView({
   routePositions = null,
   onBoundsChange,
   onZoomChange,
+  basemap = 'default',
+  onBasemapChange,
+  osApiKey,
 }: MapViewProps) {
   const defaultCenter: [number, number] = [54.5, -3.5];
   const defaultZoom = 6;
+
+  const osLayer = basemap.startsWith('os-') ? OS_LAYERS.find((l) => l.id === basemap)?.layer : null;
+  const osUrl =
+    osApiKey && osLayer
+      ? `https://api.os.uk/maps/raster/v1/zxy/${osLayer}/{z}/{x}/{y}.png?key=${encodeURIComponent(osApiKey)}`
+      : null;
 
   return (
     <MapContainer
@@ -335,12 +421,20 @@ export default function MapView({
       zoomControl={false}
       attributionControl={false}
     >
-      <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-      />
+      {osUrl ? (
+        <TileLayer
+          url={osUrl}
+          attribution='&copy; <a href="https://www.ordnancesurvey.co.uk/">Ordnance Survey</a>'
+        />
+      ) : (
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        />
+      )}
       <MapController center={center} selectedLocation={selectedLocation} />
       <MapZoomControls />
+      <MapLayerControl basemap={basemap} onBasemapChange={onBasemapChange} osApiKey={osApiKey} />
       {onBoundsChange && <BoundsReporter onBoundsChange={onBoundsChange} onZoomChange={onZoomChange} />}
       {routePositions && routePositions.length >= 2 && (
         <Polyline

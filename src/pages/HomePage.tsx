@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import MapView from '@/components/map/MapView';
+import MapView, { type BasemapId } from '@/components/map/MapView';
 import SearchBar from '@/components/SearchBar';
 import FilterPills from '@/components/FilterPills';
 import LocationSheet from '@/components/LocationSheet';
@@ -61,6 +61,7 @@ export default function HomePage() {
   const [routeStops, setRouteStops] = useState<Location[]>([]);
   const [routePanelOpen, setRoutePanelOpen] = useState(false);
   const [showRouteEmptyHint, setShowRouteEmptyHint] = useState(false);
+  const [basemap, setBasemap] = useState<BasemapId>('default');
   const routeHintRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState<Bounds | null>(DEFAULT_UK_BOUNDS);
 
@@ -228,6 +229,9 @@ export default function HomePage() {
           userLocation={userLocation}
           routePositions={routePositions}
           onBoundsChange={setBounds}
+          basemap={basemap}
+          onBasemapChange={setBasemap}
+          osApiKey={import.meta.env.VITE_OS_API_KEY}
         />
       </div>
 
