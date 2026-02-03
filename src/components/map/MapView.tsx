@@ -116,6 +116,35 @@ function MapController({ center, selectedLocation }: { center?: [number, number]
   return null;
 }
 
+function MapZoomControls() {
+  const map = useMap();
+  return (
+    <div className="absolute bottom-4 right-4 z-[500] flex flex-col gap-1 rounded-xl overflow-hidden shadow-lg border border-neutral-700 bg-neutral-900/95 backdrop-blur-sm">
+      <button
+        type="button"
+        onClick={() => map.zoomIn()}
+        className="w-10 h-10 flex items-center justify-center text-neutral-300 hover:text-white hover:bg-neutral-700 transition-colors"
+        aria-label="Zoom in"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        onClick={() => map.zoomOut()}
+        className="w-10 h-10 flex items-center justify-center text-neutral-300 hover:text-white hover:bg-neutral-700 transition-colors"
+        aria-label="Zoom out"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
 function BoundsReporter({ onBoundsChange, onZoomChange }: { onBoundsChange: (bounds: Bounds) => void; onZoomChange?: (zoom: number) => void }) {
   const map = useMap();
   const report = useCallback(() => {
@@ -318,6 +347,7 @@ export default function MapView({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       />
       <MapController center={center} selectedLocation={selectedLocation} />
+      <MapZoomControls />
       {onBoundsChange && <BoundsReporter onBoundsChange={onBoundsChange} onZoomChange={onZoomChange} />}
       {routePositions && routePositions.length >= 2 && (
         <Polyline
