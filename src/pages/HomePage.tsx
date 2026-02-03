@@ -50,7 +50,6 @@ export default function HomePage() {
   const [routeStops, setRouteStops] = useState<Location[]>([]);
   const [routePanelOpen, setRoutePanelOpen] = useState(false);
   const [bounds, setBounds] = useState<Bounds | null>(DEFAULT_UK_BOUNDS);
-  const [zoom, setZoom] = useState<number>(6);
   const { addSaved, removeSaved, isSaved } = useSavedPlaces();
   const { locations: apiLocations } = usePlacesInBounds(bounds);
 
@@ -158,7 +157,6 @@ export default function HomePage() {
           userLocation={userLocation}
           routePositions={routePositions}
           onBoundsChange={setBounds}
-          onZoomChange={setZoom}
         />
       </div>
 
