@@ -8,15 +8,18 @@ type VercelResponse = {
   end: (body?: string) => void;
 };
 
+/** Allow long-running sync (Vercel Pro: up to 300s; Hobby: 10s). */
+export const config = { maxDuration: 300 };
+
 const GOOGLE_PLACES_BASE = 'https://maps.googleapis.com/maps/api/place/textsearch/json';
 const OCM_BASE = 'https://api.openchargemap.io/v3/poi/';
 const PLACE_TYPES = ['campground', 'rest_stop', 'electric_vehicle_charging_station'] as const;
 const GOOGLE_MAX_RADIUS_M = 50000;
-/** Larger grid so we download comprehensive UK data to Supabase for offline viewing. */
-const MAX_GRID_CELLS = 24;
 const GRID_STEP_M = 70000;
+/** Delay (ms) before using next_page_token (Google requirement). */
+const GOOGLE_PAGE_DELAY_MS = 1500;
 
-/** UK bounds for sync (same as app default). */
+/** UK bounds – fetch ALL locations for entire UK. */
 const SYNC_BOUNDS = { swLat: 49.8, swLng: -8.6, neLat: 60.9, neLng: 1.8 };
 
 type ExternalSource = 'google' | 'open_charge_map';
@@ -72,23 +75,16 @@ function toAppType(googleType: string): 'campsite' | 'ev_charger' | 'rest_stop' 
   return 'rest_stop';
 }
 
-function getGridCenters(
-  swLat: number,
-  swLng: number,
-  neLat: number,
-  neLng: number
-): { lat: number; lng: number }[] {
+/** Full UK grid – no cell limit. Covers entire UK for comprehensive sync. */
+function getUKGridCenters(): { lat: number; lng: number }[] {
+  const { swLat, swLng, neLat, neLng } = SYNC_BOUNDS;
   const centerLat = (swLat + neLat) / 2;
   const latMetersPerDeg = 111320;
   const lngMetersPerDeg = 111320 * Math.cos((centerLat * Math.PI) / 180);
   const heightM = (neLat - swLat) * latMetersPerDeg;
   const widthM = (neLng - swLng) * lngMetersPerDeg;
-  let rows = Math.max(1, Math.ceil(heightM / GRID_STEP_M));
-  let cols = Math.max(1, Math.ceil(widthM / GRID_STEP_M));
-  while (rows * cols > MAX_GRID_CELLS) {
-    if (rows > cols) rows = Math.max(1, rows - 1);
-    else cols = Math.max(1, cols - 1);
-  }
+  const rows = Math.max(1, Math.ceil(heightM / GRID_STEP_M));
+  const cols = Math.max(1, Math.ceil(widthM / GRID_STEP_M));
   const centers: { lat: number; lng: number }[] = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
@@ -114,9 +110,15 @@ function formatOcmDescription(r: OCMResult): string {
   return [points, conns.join(', '), cost].filter(Boolean).join(' ') || 'EV charging point';
 }
 
-async function fetchOcmInBounds(swLat: number, swLng: number, neLat: number, neLng: number): Promise<SupabaseLocationRow[]> {
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Fetch ALL UK EV chargers from OpenChargeMap. Single request, no limit (API may cap at ~10k). */
+async function fetchAllOcmUK(): Promise<SupabaseLocationRow[]> {
+  const { swLat, swLng, neLat, neLng } = SYNC_BOUNDS;
   const bbox = `${swLat},${swLng},${neLat},${neLng}`;
-  const url = `${OCM_BASE}?output=json&boundingbox=${bbox}&maxresults=500&compact=true&verbose=false`;
+  const url = `${OCM_BASE}?output=json&boundingbox=${bbox}&maxresults=50000&compact=true&verbose=false`;
   try {
     const resp = await fetch(url);
     if (!resp.ok) return [];
@@ -155,56 +157,79 @@ async function fetchOcmInBounds(swLat: number, swLng: number, neLat: number, neL
   }
 }
 
-async function fetchGoogleInBounds(
-  swLat: number,
-  swLng: number,
-  neLat: number,
-  neLng: number,
-  key: string
-): Promise<SupabaseLocationRow[]> {
-  const gridCenters = getGridCenters(swLat, swLng, neLat, neLng);
+/** Fetch one page of Google Places (optionally with pagetoken). */
+async function fetchGooglePage(
+  centerLat: number,
+  centerLng: number,
+  type: string,
+  key: string,
+  pageToken?: string
+): Promise<{ results: GooglePlaceResult[]; next_page_token?: string }> {
+  const url = new URL(GOOGLE_PLACES_BASE);
+  if (pageToken) {
+    url.searchParams.set('pagetoken', pageToken);
+  } else {
+    url.searchParams.set('query', type.replace(/_/g, ' '));
+    url.searchParams.set('location', `${centerLat},${centerLng}`);
+    url.searchParams.set('radius', String(GOOGLE_MAX_RADIUS_M));
+    url.searchParams.set('type', type);
+    url.searchParams.set('key', key);
+  }
+  const resp = await fetch(url.toString());
+  const data = (await resp.json()) as {
+    status: string;
+    results?: GooglePlaceResult[];
+    next_page_token?: string;
+  };
+  return {
+    results: data.status === 'OK' && Array.isArray(data.results) ? data.results : [],
+    next_page_token: data.next_page_token,
+  };
+}
+
+/** Fetch ALL Google Places for UK: full grid + pagination. */
+async function fetchAllGoogleUK(key: string): Promise<SupabaseLocationRow[]> {
+  const gridCenters = getUKGridCenters();
   const byId = new Map<string, SupabaseLocationRow>();
   const now = new Date().toISOString();
 
   for (const type of PLACE_TYPES) {
     for (const { lat: centerLat, lng: centerLng } of gridCenters) {
-      const url = new URL(GOOGLE_PLACES_BASE);
-      url.searchParams.set('query', type.replace(/_/g, ' '));
-      url.searchParams.set('location', `${centerLat},${centerLng}`);
-      url.searchParams.set('radius', String(GOOGLE_MAX_RADIUS_M));
-      url.searchParams.set('type', type);
-      url.searchParams.set('key', key);
-      try {
-        const resp = await fetch(url.toString());
-        const data = (await resp.json()) as { status: string; results?: GooglePlaceResult[] };
-        if (data.status === 'OK' && Array.isArray(data.results)) {
-          for (const r of data.results) {
-            const loc = r.geometry?.location;
-            if (!loc) continue;
-            const row: SupabaseLocationRow = {
-              name: r.name || 'Unnamed',
-              type: toAppType(type),
-              lat: loc.lat,
-              lng: loc.lng,
-              description: r.formatted_address || '',
-              address: r.formatted_address || '',
-              price: null,
-              facilities: [],
-              images: [],
-              website: null,
-              phone: null,
-              google_place_id: r.place_id,
-              external_id: r.place_id,
-              external_source: 'google',
-              created_at: now,
-              updated_at: now,
-            };
-            byId.set(r.place_id, row);
-          }
+      let pageToken: string | undefined;
+      do {
+        const { results, next_page_token } = await fetchGooglePage(
+          centerLat,
+          centerLng,
+          type,
+          key,
+          pageToken
+        );
+        for (const r of results) {
+          const loc = r.geometry?.location;
+          if (!loc) continue;
+          const row: SupabaseLocationRow = {
+            name: r.name || 'Unnamed',
+            type: toAppType(type),
+            lat: loc.lat,
+            lng: loc.lng,
+            description: r.formatted_address || '',
+            address: r.formatted_address || '',
+            price: null,
+            facilities: [],
+            images: [],
+            website: null,
+            phone: null,
+            google_place_id: r.place_id,
+            external_id: r.place_id,
+            external_source: 'google',
+            created_at: now,
+            updated_at: now,
+          };
+          byId.set(r.place_id, row);
         }
-      } catch (e) {
-        console.error('Google Places fetch error:', e);
-      }
+        pageToken = next_page_token ?? undefined;
+        if (pageToken) await sleep(GOOGLE_PAGE_DELAY_MS);
+      } while (pageToken);
     }
   }
   return Array.from(byId.values());
@@ -233,22 +258,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const ocmRows = await fetchOcmInBounds(
-      SYNC_BOUNDS.swLat,
-      SYNC_BOUNDS.swLng,
-      SYNC_BOUNDS.neLat,
-      SYNC_BOUNDS.neLng
-    );
+    const ocmRows = await fetchAllOcmUK();
     let googleRows: SupabaseLocationRow[] = [];
     const googleKey = process.env.GOOGLE_PLACES_API_KEY;
     if (googleKey) {
-      googleRows = await fetchGoogleInBounds(
-        SYNC_BOUNDS.swLat,
-        SYNC_BOUNDS.swLng,
-        SYNC_BOUNDS.neLat,
-        SYNC_BOUNDS.neLng,
-        googleKey
-      );
+      googleRows = await fetchAllGoogleUK(googleKey);
     }
 
     const allRows = [...ocmRows, ...googleRows];
