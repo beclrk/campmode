@@ -50,6 +50,7 @@ export default function HomePage() {
   const [routeStops, setRouteStops] = useState<Location[]>([]);
   const [routePanelOpen, setRoutePanelOpen] = useState(false);
   const [bounds, setBounds] = useState<Bounds | null>(DEFAULT_UK_BOUNDS);
+  const [zoom, setZoom] = useState<number>(6);
   const { addSaved, removeSaved, isSaved } = useSavedPlaces();
   const { locations: apiLocations } = usePlacesInBounds(bounds);
 
@@ -97,9 +98,16 @@ export default function HomePage() {
   // Prefer real-world data whenever we have any from the API; otherwise sample data
   const baseLocations = apiLocations.length > 0 ? apiLocations : sampleLocations;
 
+  // When zoomed out, show top N by popularity (API already sorts by rating × review count)
+  const MAX_MARKERS_WHEN_ZOOMED_OUT = 250;
+  const locationsToShow = useMemo(() => {
+    if (zoom <= 8) return baseLocations.slice(0, MAX_MARKERS_WHEN_ZOOMED_OUT);
+    return baseLocations;
+  }, [baseLocations, zoom]);
+
   // Filter locations
   const filteredLocations = useMemo(() => {
-    let result = baseLocations;
+    let result = locationsToShow;
 
     // Filter by type
     if (filter !== 'all') {
@@ -118,9 +126,9 @@ export default function HomePage() {
     }
 
     return result;
-  }, [baseLocations, filter, searchQuery]);
+  }, [locationsToShow, filter, searchQuery]);
 
-  // Count by type
+  // Count by type (from full base so pills show total available)
   const counts = useMemo(() => ({
     all: baseLocations.length,
     campsite: baseLocations.filter((l) => l.type === 'campsite').length,
@@ -157,6 +165,7 @@ export default function HomePage() {
           userLocation={userLocation}
           routePositions={routePositions}
           onBoundsChange={setBounds}
+          onZoomChange={setZoom}
         />
       </div>
 

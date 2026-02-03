@@ -24,6 +24,8 @@ type LocationItem = {
   ocm_id?: number;
   website?: string;
   phone?: string;
+  rating?: number;
+  user_ratings_total?: number;
   created_at: string;
   updated_at: string;
 };
@@ -49,6 +51,8 @@ function normalizePlace(result: GooglePlaceResult, type: PlaceType): LocationIte
     facilities: [],
     images: [],
     google_place_id: result.place_id,
+    rating: result.rating,
+    user_ratings_total: result.user_ratings_total,
     created_at: now,
     updated_at: now,
   };
@@ -59,6 +63,8 @@ interface GooglePlaceResult {
   name?: string;
   formatted_address?: string;
   geometry?: { location?: { lat: number; lng: number } };
+  rating?: number;
+  user_ratings_total?: number;
 }
 
 interface OCMResult {
@@ -94,7 +100,9 @@ function formatOcmDescription(r: OCMResult): string {
 
 async function fetchOcmInBounds(swLat: number, swLng: number, neLat: number, neLng: number): Promise<LocationItem[]> {
   const bbox = `${swLat},${swLng},${neLat},${neLng}`;
-  const url = `${OCM_BASE}?output=json&boundingbox=${bbox}&maxresults=100&compact=true&verbose=false`;
+  const areaDeg = (neLat - swLat) * (neLng - swLng);
+  const maxresults = areaDeg > 10 ? 300 : areaDeg > 2 ? 200 : 100;
+  const url = `${OCM_BASE}?output=json&boundingbox=${bbox}&maxresults=${maxresults}&compact=true&verbose=false`;
   try {
     const resp = await fetch(url);
     if (!resp.ok) return [];
@@ -189,6 +197,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const allLocations = Array.from(byId.values());
+  const popularityScore = (loc: LocationItem) => {
+    const r = loc.rating ?? 0;
+    const n = loc.user_ratings_total ?? 0;
+    return r * Math.log10(n + 1);
+  };
+  allLocations.sort((a, b) => popularityScore(b) - popularityScore(a));
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
   return res.status(200).json({ locations: allLocations });

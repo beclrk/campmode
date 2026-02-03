@@ -15,6 +15,8 @@ interface MapViewProps {
   routePositions?: [number, number][] | null;
   /** Called when the visible map bounds change (for loading real-world places in view). */
   onBoundsChange?: (bounds: Bounds) => void;
+  /** Called when the map zoom level changes (for prioritising popular places when zoomed out). */
+  onZoomChange?: (zoom: number) => void;
 }
 
 // Custom marker icon creator
@@ -101,13 +103,20 @@ function MapController({ center, selectedLocation }: {
   return null;
 }
 
-function BoundsReporter({ onBoundsChange }: { onBoundsChange: (bounds: Bounds) => void }) {
+function BoundsReporter({
+  onBoundsChange,
+  onZoomChange,
+}: {
+  onBoundsChange: (bounds: Bounds) => void;
+  onZoomChange?: (zoom: number) => void;
+}) {
   const map = useMap();
   const report = () => {
     const b = map.getBounds();
     const sw = b.getSouthWest();
     const ne = b.getNorthEast();
     onBoundsChange({ sw: [sw.lat, sw.lng], ne: [ne.lat, ne.lng] });
+    onZoomChange?.(map.getZoom());
   };
   useEffect(() => {
     report();
@@ -115,7 +124,7 @@ function BoundsReporter({ onBoundsChange }: { onBoundsChange: (bounds: Bounds) =
     return () => {
       map.off('moveend', report);
     };
-  }, [map, onBoundsChange]);
+  }, [map, onBoundsChange, onZoomChange]);
   return null;
 }
 
@@ -127,6 +136,7 @@ export default function MapView({
   userLocation,
   routePositions = null,
   onBoundsChange,
+  onZoomChange,
 }: MapViewProps) {
   // UK center
   const defaultCenter: [number, number] = [54.5, -3.5];
@@ -149,8 +159,10 @@ export default function MapView({
       {/* Map controller for animations */}
       <MapController center={center} selectedLocation={selectedLocation} />
 
-      {/* Report bounds for loading real-world places */}
-      {onBoundsChange && <BoundsReporter onBoundsChange={onBoundsChange} />}
+      {/* Report bounds and zoom for loading / prioritising places */}
+      {onBoundsChange && (
+        <BoundsReporter onBoundsChange={onBoundsChange} onZoomChange={onZoomChange} />
+      )}
 
       {/* Route line - follows roads from user location through each stop */}
       {routePositions && routePositions.length >= 2 && (

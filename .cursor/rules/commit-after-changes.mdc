@@ -3,13 +3,13 @@ description: Always commit and push changes after making them
 alwaysApply: true
 ---
 
-# Commit and Push After Changes
+# Auto Commit and Push After Changes
 
-After making any code or config changes in this project, **commit and push** in the same session so the user can view changes on GitHub (and Vercel) straight away.
+**Do this automatically every time you make code or config changes.** Do not wait for the user to ask. We work quickly; the user should not have to remind you to push.
 
-- Run `git add` for the changed files (or `git add .` when appropriate).
-- Run `git commit` with a short, clear message describing what changed.
-- **Then run `git push origin main`** so changes appear on GitHub (and Vercel) immediately.
-- **Always use `required_permissions: ["all"]` for both commit and push.** The sandbox blocks access to the macOS Keychain; without `all`, `git push` fails with "could not read Username" and changes stay local.
+1. After editing files: run `git add` for the changed files (or `git add .` when appropriate).
+2. Run `git commit -m "short clear message"` describing what changed.
+3. Run `git push` (or `git push origin main`) so changes appear on GitHub and Vercel immediately.
+4. **Use `required_permissions: ["all"]` for push.** Without it, push fails with "could not read Username" and changes stay local.
 
-If the user said they don't want commits/pushes, or asked to only make changes without committing, skip the commit and push.
+Only skip commit/push if the user explicitly said they don't want commits or pushes, or asked to only make changes without committing.

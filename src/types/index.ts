@@ -17,6 +17,10 @@ export interface Location {
   google_place_id?: string;
   /** Open Charge Map POI ID – used for "View on Open Charge Map" link when no Google place */
   ocm_id?: number;
+  /** Google rating 1–5; used to prioritise popular places when zoomed out */
+  rating?: number;
+  /** Google review count; used with rating for popularity score */
+  user_ratings_total?: number;
   created_at: string;
   updated_at: string;
 }
