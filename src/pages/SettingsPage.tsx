@@ -166,7 +166,7 @@ export default function SettingsPage() {
         <h1 className="text-xl font-bold text-white">Settings</h1>
       </header>
 
-      <main className="relative z-10 flex-1 overflow-y-auto p-4 pb-8">
+      <main className="relative z-10 flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 pb-8">
         {/* Map & display */}
         <SettingsSection title="Map & display" icon={MapPin}>
           <SettingsRow
