@@ -150,7 +150,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-neutral-950 overflow-hidden">
+    <div className="fixed inset-0 flex flex-col bg-neutral-950 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-green-900/10 via-neutral-950 to-neutral-950 pointer-events-none" />
 
       {/* Header - fixed height */}
@@ -166,8 +166,12 @@ export default function SettingsPage() {
         <h1 className="text-xl font-bold text-white">Settings</h1>
       </header>
 
-      {/* Scrollable content - takes remaining space */}
-      <main className="relative z-10 flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 pb-8 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+      {/* Wrapper gives scroll area a definite height; main fills it and scrolls */}
+      <div className="relative z-10 flex-1 min-h-0 flex flex-col overflow-hidden">
+        <main
+          className="settings-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 pb-12"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
         {/* Map & display */}
         <SettingsSection title="Map & display" icon={MapPin}>
           <SettingsRow
@@ -378,6 +382,7 @@ export default function SettingsPage() {
           />
         </SettingsSection>
       </main>
+      </div>
     </div>
   );
 }

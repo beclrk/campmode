@@ -41,6 +41,15 @@ body {
   min-height: 0;
 }
 
+/* Settings page: scrollable main area (fixed layout so height is viewport-based) */
+.settings-scroll {
+  overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+  min-height: 0;
+}
+
 /* Custom Leaflet marker styles */
 .leaflet-container {
   background: #1a1a1a;
