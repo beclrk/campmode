@@ -150,11 +150,11 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex flex-col">
-      <div className="absolute inset-0 bg-gradient-to-br from-green-900/10 via-neutral-950 to-neutral-950" />
+    <div className="h-[100dvh] flex flex-col bg-neutral-950 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-green-900/10 via-neutral-950 to-neutral-950 pointer-events-none" />
 
-      {/* Header */}
-      <header className="relative z-10 flex items-center gap-4 px-4 py-4 border-b border-neutral-800 safe-top">
+      {/* Header - fixed height */}
+      <header className="relative z-10 flex-shrink-0 flex items-center gap-4 px-4 py-4 border-b border-neutral-800 safe-top">
         <button
           type="button"
           onClick={() => navigate('/')}
@@ -166,7 +166,8 @@ export default function SettingsPage() {
         <h1 className="text-xl font-bold text-white">Settings</h1>
       </header>
 
-      <main className="relative z-10 flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 pb-8">
+      {/* Scrollable content - takes remaining space */}
+      <main className="relative z-10 flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 pb-8 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
         {/* Map & display */}
         <SettingsSection title="Map & display" icon={MapPin}>
           <SettingsRow
