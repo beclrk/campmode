@@ -128,7 +128,9 @@ function BoundsReporter({ onBoundsChange, onZoomChange }: { onBoundsChange: (bou
   useEffect(() => {
     report();
     map.on('moveend', report);
-    return () => map.off('moveend', report);
+    return () => {
+      map.off('moveend', report);
+    };
   }, [map, report]);
   return null;
 }
