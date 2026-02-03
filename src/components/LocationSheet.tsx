@@ -187,17 +187,17 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
   };
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 z-[1000] location-sheet-wrapper">
+    <div className="absolute bottom-0 left-0 right-0 z-[1000] location-sheet-wrapper location-sheet-full-bottom">
       {/* Backdrop - above map panes (Leaflet uses 200-700) */}
       <div 
         className="fixed inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       />
       
-      {/* Sheet - flex column so scroll area gets definite height for iOS */}
+      {/* Sheet - full height to bottom so no gap; content scrolls inside */}
       <div
         ref={sheetRef}
-        className="relative flex flex-col bg-neutral-900 rounded-t-3xl max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom duration-300"
+        className="relative flex flex-col bg-neutral-900 rounded-t-3xl h-[100dvh] max-h-[100dvh] overflow-hidden animate-in slide-in-from-bottom duration-300"
       >
         {/* Handle - drag down to dismiss */}
         <div
