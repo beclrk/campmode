@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import AppPromoBanner from '@/components/AppPromoBanner';
 import HomePage from '@/pages/HomePage';
 import LoginPage from '@/pages/LoginPage';
+import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import SettingsPage from '@/pages/SettingsPage';
 import SavedPlacesPage from '@/pages/SavedPlacesPage';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
@@ -32,8 +33,9 @@ function ProtectedRoute() {
 function AppRoutes() {
   return (
     <Routes>
-      {/* Public: login and legal pages */}
+      {/* Public: login, reset password, and legal pages */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/privacy" element={<PrivacyPolicyPage />} />
       <Route path="/terms" element={<TermsPage />} />
 

@@ -129,7 +129,7 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: window.location.origin,
+      redirectTo: `${window.location.origin}/reset-password`, // Add this URL to Supabase Auth → URL Configuration → Redirect URLs
     });
     if (error) setAuthError(error.message, 'forgot');
     else setMessage('Check your email for a link to reset your password.');
