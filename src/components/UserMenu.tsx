@@ -57,15 +57,22 @@ export default function UserMenu() {
     >
           {user ? (
             <>
-              {/* User info */}
-              <div className="px-4 py-3 border-b border-neutral-800">
+              {/* User info - clickable, goes to Settings Account section */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate('/settings#account');
+                }}
+                className="w-full px-4 py-3 border-b border-neutral-800 text-left hover:bg-neutral-800/50 transition-colors"
+              >
                 <p className="text-white font-medium truncate">
                   {user.user_metadata?.full_name || 'User'}
                 </p>
                 <p className="text-neutral-500 text-sm truncate">
                   {user.email}
                 </p>
-              </div>
+              </button>
 
               {/* Menu items */}
               <div className="py-1">

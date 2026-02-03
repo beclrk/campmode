@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MapView from '@/components/map/MapView';
 import SearchBar from '@/components/SearchBar';
@@ -60,7 +60,20 @@ export default function HomePage() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [routeStops, setRouteStops] = useState<Location[]>([]);
   const [routePanelOpen, setRoutePanelOpen] = useState(false);
+  const [showRouteEmptyHint, setShowRouteEmptyHint] = useState(false);
+  const routeHintRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState<Bounds | null>(DEFAULT_UK_BOUNDS);
+
+  useEffect(() => {
+    if (!showRouteEmptyHint) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (routeHintRef.current && !routeHintRef.current.contains(e.target as Node)) {
+        setShowRouteEmptyHint(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showRouteEmptyHint]);
   const { addSaved, removeSaved, isSaved } = useSavedPlaces();
   const { locations: apiLocations } = usePlacesInBounds(bounds);
 
@@ -232,25 +245,48 @@ export default function HomePage() {
                 onClearLocation={handleClearLocation}
               />
             </div>
-            <button
-              type="button"
-              onClick={() => setRoutePanelOpen((o) => !o)}
-              className={cn(
-                'relative flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors',
-                routeStops.length > 0
-                  ? 'bg-green-500/20 text-green-500'
-                  : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white'
+            <div ref={routeHintRef} className="relative flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  if (routeStops.length > 0) {
+                    setRoutePanelOpen((o) => !o);
+                    setShowRouteEmptyHint(false);
+                  } else {
+                    setShowRouteEmptyHint((h) => !h);
+                  }
+                }}
+                className={cn(
+                  'relative w-10 h-10 rounded-xl flex items-center justify-center transition-colors',
+                  routeStops.length > 0
+                    ? 'bg-green-500/20 text-green-500'
+                    : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white'
+                )}
+                aria-label="Route planner"
+                title="Route planner"
+              >
+                <Route className="w-5 h-5" />
+                {routeStops.length > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-green-500 text-white text-xs font-semibold flex items-center justify-center">
+                    {routeStops.length}
+                  </span>
+                )}
+              </button>
+              {showRouteEmptyHint && routeStops.length === 0 && (
+                <div className="absolute top-full right-0 mt-2 z-[1001] w-64 p-3 rounded-xl bg-neutral-900 border border-neutral-700 shadow-xl text-left">
+                  <p className="text-sm text-neutral-200">
+                    Add locations to your route first. Tap a place on the map, then tap &quot;Add to route&quot; in the location card.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowRouteEmptyHint(false)}
+                    className="mt-2 text-sm text-green-500 hover:text-green-400 font-medium"
+                  >
+                    Got it
+                  </button>
+                </div>
               )}
-              aria-label="Route planner"
-              title="Route planner"
-            >
-              <Route className="w-5 h-5" />
-              {routeStops.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-green-500 text-white text-xs font-semibold flex items-center justify-center">
-                  {routeStops.length}
-                </span>
-              )}
-            </button>
+            </div>
             <UserMenu />
           </div>
 

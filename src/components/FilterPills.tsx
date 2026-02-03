@@ -32,14 +32,14 @@ export default function FilterPills({ selectedTypes, onToggleType, counts }: Fil
             key={key}
             onClick={() => onToggleType(key)}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
+              "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all backdrop-blur-sm",
               isSelected
                 ? color === 'green'
-                  ? "bg-green-500/55 backdrop-blur-sm border border-green-400/25 text-white"
+                  ? "bg-green-500/[0.55] border border-green-400/25 text-white"
                   : color === 'blue'
-                  ? "bg-blue-500/55 backdrop-blur-sm border border-blue-400/25 text-white"
-                  : "bg-amber-500/55 backdrop-blur-sm border border-amber-400/25 text-white"
-                : 'bg-neutral-800/80 text-neutral-300 hover:bg-neutral-700'
+                  ? "bg-blue-500/[0.55] border border-blue-400/25 text-white"
+                  : "bg-amber-500/[0.55] border border-amber-400/25 text-white"
+                : "bg-neutral-800/80 text-neutral-300 hover:bg-neutral-700"
             )}
           >
             <Icon className="w-4 h-4" />

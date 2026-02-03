@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
   MapPin,
@@ -16,13 +16,15 @@ function SettingsSection({
   title,
   icon: Icon,
   children,
+  id,
 }: {
   title: string;
   icon: React.ElementType;
   children: React.ReactNode;
+  id?: string;
 }) {
   return (
-    <section className="mb-8">
+    <section className="mb-8" id={id}>
       <div className="flex items-center gap-2 mb-4">
         <Icon className="w-5 h-5 text-green-500" />
         <h2 className="text-lg font-semibold text-white">{title}</h2>
@@ -108,6 +110,7 @@ function Toggle({
 
 export default function SettingsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, signOut } = useAuth();
   const [distanceUnits, setDistanceUnits] = useState<'miles' | 'km'>('miles');
   const [notifySavedPlaces, setNotifySavedPlaces] = useState(false);
@@ -117,6 +120,14 @@ export default function SettingsPage() {
   useEffect(() => {
     setDisplayName(user?.user_metadata?.full_name ?? '');
   }, [user?.user_metadata?.full_name]);
+
+  // Scroll to Account section when opened via hash (e.g. from user menu)
+  useEffect(() => {
+    if (location.hash === '#account') {
+      const el = document.getElementById('account');
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [location.hash]);
   const [nameSaving, setNameSaving] = useState(false);
   const [changePasswordSending, setChangePasswordSending] = useState(false);
   const [changePasswordMessage, setChangePasswordMessage] = useState<string | null>(null);
@@ -228,7 +239,7 @@ export default function SettingsPage() {
         </SettingsSection>
 
         {/* Account */}
-        <SettingsSection title="Account" icon={User}>
+        <SettingsSection id="account" title="Account" icon={User}>
           {user ? (
             <>
               {/* Display name */}
