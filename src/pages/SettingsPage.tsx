@@ -204,8 +204,8 @@ export default function SettingsPage() {
           ) : (
             <SettingsRow
               label="Sign in"
-              description="Sign in will be available when we re-enable login"
-              onPress={() => navigate('/')}
+              description="Sign in or create an account"
+              onPress={() => navigate('/login')}
             />
           )}
         </SettingsSection>

@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Tent, Mail, Loader2, Lock, ArrowLeft } from 'lucide-react';
 
 type Mode = 'choose' | 'signin' | 'signup-email' | 'signup-password';
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>('choose');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -71,6 +73,7 @@ export default function LoginPage() {
       return;
     }
     setLoading(false);
+    navigate('/', { replace: true });
   };
 
   // Step 1: Enter email for sign-up

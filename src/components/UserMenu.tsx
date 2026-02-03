@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Settings, Heart } from 'lucide-react';
+import { LogIn, LogOut, Settings, Heart } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function UserMenu() {
@@ -24,61 +24,90 @@ export default function UserMenu() {
 
   return (
     <div className="relative" ref={menuRef}>
-      {/* Avatar button */}
+      {/* Avatar or Sign in button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white font-semibold text-sm uppercase shadow-lg shadow-green-500/20 hover:scale-105 transition-transform"
       >
-        {userInitial}
+        {user ? userInitial : <LogIn className="w-5 h-5" />}
       </button>
 
       {/* Dropdown menu */}
       {isOpen && (
         <div className="absolute top-full right-0 mt-2 w-56 bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
-          {/* User info */}
-          <div className="px-4 py-3 border-b border-neutral-800">
-            <p className="text-white font-medium truncate">
-              {user?.user_metadata?.full_name || 'User'}
-            </p>
-            <p className="text-neutral-500 text-sm truncate">
-              {user?.email}
-            </p>
-          </div>
+          {user ? (
+            <>
+              {/* User info */}
+              <div className="px-4 py-3 border-b border-neutral-800">
+                <p className="text-white font-medium truncate">
+                  {user.user_metadata?.full_name || 'User'}
+                </p>
+                <p className="text-neutral-500 text-sm truncate">
+                  {user.email}
+                </p>
+              </div>
 
-          {/* Menu items */}
-          <div className="py-1">
-            <button
-              onClick={() => {
-                setIsOpen(false);
-                navigate('/saved');
-              }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-neutral-300 hover:bg-neutral-800 transition-colors text-left"
-            >
-              <Heart className="w-4 h-4" />
-              <span>Saved Places</span>
-            </button>
-            <button
-              onClick={() => {
-                setIsOpen(false);
-                navigate('/settings');
-              }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-neutral-300 hover:bg-neutral-800 transition-colors text-left"
-            >
-              <Settings className="w-4 h-4" />
-              <span>Settings</span>
-            </button>
-          </div>
+              {/* Menu items */}
+              <div className="py-1">
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    navigate('/saved');
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-neutral-300 hover:bg-neutral-800 transition-colors text-left"
+                >
+                  <Heart className="w-4 h-4" />
+                  <span>Saved Places</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    navigate('/settings');
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-neutral-300 hover:bg-neutral-800 transition-colors text-left"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Settings</span>
+                </button>
+              </div>
 
-          {/* Sign out */}
-          <div className="border-t border-neutral-800 py-1">
-            <button
-              onClick={signOut}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-red-400 hover:bg-neutral-800 transition-colors text-left"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Sign Out</span>
-            </button>
-          </div>
+              {/* Sign out */}
+              <div className="border-t border-neutral-800 py-1">
+                <button
+                  onClick={signOut}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-red-400 hover:bg-neutral-800 transition-colors text-left"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="py-1">
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    navigate('/login');
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-neutral-300 hover:bg-neutral-800 transition-colors text-left"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Sign in / Create account</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    navigate('/settings');
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-neutral-300 hover:bg-neutral-800 transition-colors text-left"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Settings</span>
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
