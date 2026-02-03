@@ -287,12 +287,12 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
             </div>
           )}
 
-          {/* Quick actions: always visible near top (Open in Google, Call) so visible on web without scrolling */}
-          <div className="flex flex-wrap gap-2 mb-4">
+          {/* Quick actions: full width row (Open in Google, Call) so visible on web without scrolling */}
+          <div className={cn("w-full grid gap-2 mb-4", location.phone ? "grid-cols-2" : "grid-cols-1")}>
             <button
               type="button"
               onClick={handleOpenInGoogle}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-medium transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-medium transition-colors"
             >
               <ExternalLink className="w-4 h-4" />
               Open in Google
@@ -300,7 +300,7 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
             {location.phone && (
               <a
                 href={`tel:${String(location.phone).replace(/\s/g, '')}`}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-medium transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-medium transition-colors"
               >
                 <Phone className="w-4 h-4" />
                 Call
@@ -326,10 +326,18 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
             <ExternalLink className="w-4 h-4 text-neutral-500 shrink-0 mt-0.5" />
           </div>
 
-          {/* Description */}
-          <p className="text-neutral-400 text-sm leading-relaxed mb-5">
-            {location.description ?? ''}
-          </p>
+          {/* Description - hide when same as address to avoid showing location twice */}
+          {(() => {
+            const desc = (location.description ?? '').trim();
+            const addr = (location.address ?? '').trim();
+            const isSameAsAddress = addr && desc && (desc === addr || desc.includes(addr) || addr.includes(desc));
+            if (!desc || isSameAsAddress) return null;
+            return (
+              <p className="text-neutral-400 text-sm leading-relaxed mb-5">
+                {desc}
+              </p>
+            );
+          })()}
 
           {/* Contact section */}
           {(location.phone || location.website) && (
@@ -478,8 +486,8 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
             </div>
           )}
 
-          {/* Action buttons: Website, Call, Navigate, Open in Google */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          {/* Action buttons: Website, Call, Navigate, Open in Google - full width on web */}
+          <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             {location.website && typeof location.website === 'string' && (
               <button
                 onClick={handleWebsite}
@@ -531,6 +539,37 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
                 )} 
               />
             </button>
+
+            {/* View Google Reviews / Open Charge Map - always visible below dropdown header */}
+            <div className="mt-3 flex flex-col gap-2">
+              {location.google_place_id && (
+                <a
+                  href={`https://www.google.com/maps/place/?q=place_id:${location.google_place_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 p-3 bg-neutral-800 rounded-xl text-neutral-300 hover:bg-neutral-700 transition-colors w-full"
+                >
+                  <img 
+                    src="https://www.google.com/favicon.ico" 
+                    alt="Google" 
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">View Google Reviews</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+              {location.type === 'ev_charger' && location.ocm_id && (
+                <a
+                  href={`https://openchargemap.org/site/poi/details/${location.ocm_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 p-3 bg-neutral-800 rounded-xl text-neutral-300 hover:bg-neutral-700 transition-colors w-full"
+                >
+                  <span className="text-sm">View on Open Charge Map</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
 
             {isReviewsOpen && (
               <div className="mt-4 space-y-4">
@@ -587,37 +626,6 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
                   <div className="text-center py-8 text-neutral-500 text-sm">
                     No reviews yet. Be the first to share your experience!
                   </div>
-                )}
-
-                {/* Google Reviews link (when we have a Google Place ID) */}
-                {location.google_place_id && (
-                  <a
-                    href={`https://www.google.com/maps/place/?q=place_id:${location.google_place_id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 p-3 bg-neutral-800 rounded-xl text-neutral-300 hover:bg-neutral-700 transition-colors"
-                  >
-                    <img 
-                      src="https://www.google.com/favicon.ico" 
-                      alt="Google" 
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm">View Google Reviews</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                )}
-
-                {/* Open Charge Map link for EV chargers without Google Place */}
-                {location.type === 'ev_charger' && location.ocm_id && (
-                  <a
-                    href={`https://openchargemap.org/site/poi/details/${location.ocm_id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 p-3 bg-neutral-800 rounded-xl text-neutral-300 hover:bg-neutral-700 transition-colors"
-                  >
-                    <span className="text-sm">View on Open Charge Map</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
                 )}
               </div>
             )}
