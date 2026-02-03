@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { LogIn, LogOut, Settings, Heart } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,34 +8,53 @@ export default function UserMenu() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number } | null>(null);
 
-  // Close menu when clicking outside
+  const DROPDOWN_WIDTH = 224; // w-56
+
+  const openMenu = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const left = Math.min(
+        rect.right - DROPDOWN_WIDTH,
+        typeof window !== 'undefined' ? window.innerWidth - DROPDOWN_WIDTH - 8 : rect.right - DROPDOWN_WIDTH
+      );
+      setDropdownRect({
+        top: rect.bottom + 8,
+        left: Math.max(8, left),
+      });
+    }
+    setIsOpen(true);
+  };
+
+  // Close when clicking outside trigger or dropdown
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        isOpen &&
+        triggerRef.current &&
+        !triggerRef.current.contains(target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target)
+      ) {
         setIsOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isOpen]);
 
   const userInitial = user?.user_metadata?.full_name?.[0] || user?.email?.[0] || 'U';
 
-  return (
-    <div className="relative" ref={menuRef}>
-      {/* Avatar or Sign in button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white font-semibold text-sm uppercase shadow-lg shadow-green-500/20 hover:scale-105 transition-transform"
-      >
-        {user ? userInitial : <LogIn className="w-5 h-5" />}
-      </button>
-
-      {/* Dropdown menu - z-[1100] so it appears above FilterPills (categories) on mobile */}
-      {isOpen && (
-        <div className="absolute top-full right-0 mt-2 z-[1100] w-56 bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+  const dropdownContent = isOpen && dropdownRect && (
+    <div
+      ref={dropdownRef}
+      className="fixed w-56 bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 z-[9999]"
+      style={{ top: dropdownRect.top, left: dropdownRect.left }}
+    >
           {user ? (
             <>
               {/* User info */}
@@ -108,8 +128,22 @@ export default function UserMenu() {
               </div>
             </>
           )}
-        </div>
-      )}
+    </div>
+  );
+
+  return (
+    <div className="relative">
+      {/* Avatar or Sign in button */}
+      <button
+        ref={triggerRef}
+        onClick={() => (isOpen ? setIsOpen(false) : openMenu())}
+        className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white font-semibold text-sm uppercase shadow-lg shadow-green-500/20 hover:scale-105 transition-transform"
+      >
+        {user ? userInitial : <LogIn className="w-5 h-5" />}
+      </button>
+
+      {/* Dropdown via portal so it sits above categories and is never clipped */}
+      {dropdownContent && createPortal(dropdownContent, document.body)}
     </div>
   );
 }
