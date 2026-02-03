@@ -147,6 +147,8 @@ export default function HomePage() {
   const handleLocationSelect = (lat: number, lng: number, _name: string) => {
     setUserLocation([lat, lng]);
     setMapCenter([lat, lng]);
+    // Clear search text so we don't filter markers by the place name – show all locations near the selected place
+    setSearchQuery('');
   };
 
   const handleClearLocation = () => {
