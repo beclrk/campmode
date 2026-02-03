@@ -41,7 +41,16 @@ const DRAG_CLOSE_THRESHOLD = 100;
 function formatOpeningHours(hours: OpeningHours): string[] {
   if (!hours) return [];
   if (typeof hours === 'string') return [hours];
-  return hours.map((h) => (typeof h === 'object' && h.hours) ? h.hours : (typeof h === 'object' && h.open != null && h.close != null) ? `${h.open}-${h.close}` : '').filter(Boolean);
+  if (!Array.isArray(hours)) return [];
+  return hours.map((h) => {
+    if (typeof h === 'object' && h != null && typeof (h as { hours?: string }).hours === 'string') return (h as { hours: string }).hours;
+    if (typeof h === 'object' && h != null) {
+      const o = (h as { open?: unknown; close?: unknown }).open;
+      const c = (h as { open?: unknown; close?: unknown }).close;
+      if (typeof o === 'string' && typeof c === 'string') return `${o}-${c}`;
+    }
+    return '';
+  }).filter(Boolean);
 }
 
 function isOpenNow(hours: OpeningHours): boolean | null {
@@ -49,10 +58,14 @@ function isOpenNow(hours: OpeningHours): boolean | null {
   const now = new Date();
   const day = now.getDay();
   const time = now.getHours() * 60 + now.getMinutes();
-  const today = hours.find((h) => h.day === day);
-  if (!today || today.open == null || today.close == null) return null;
-  const [openH, openM] = [parseInt(today.open.slice(0, 2), 10), parseInt(today.open.slice(2), 10)];
-  const [closeH, closeM] = [parseInt(today.close.slice(0, 2), 10), parseInt(today.close.slice(2), 10)];
+  const today = hours.find((h) => typeof h === 'object' && h != null && (h as { day?: number }).day === day);
+  if (!today || typeof today !== 'object') return null;
+  const openStr = (today as { open?: unknown }).open;
+  const closeStr = (today as { close?: unknown }).close;
+  if (typeof openStr !== 'string' || typeof closeStr !== 'string') return null;
+  const [openH, openM] = [parseInt(openStr.slice(0, 2), 10), parseInt(openStr.slice(2), 10)];
+  const [closeH, closeM] = [parseInt(closeStr.slice(0, 2), 10), parseInt(closeStr.slice(2), 10)];
+  if (Number.isNaN(openH) || Number.isNaN(openM) || Number.isNaN(closeH) || Number.isNaN(closeM)) return null;
   const openMins = openH * 60 + openM;
   const closeMins = closeH * 60 + closeM;
   return time >= openMins && time <= closeMins;
@@ -68,7 +81,7 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
   const currentOffsetRef = useRef(0);
   const rafRef = useRef<number | null>(null);
 
-  const typeColor = getLocationTypeColor(location.type);
+  const typeColor = getLocationTypeColor(location.type ?? '');
 
   useEffect(() => {
     const handleEl = handleRef.current;
@@ -132,7 +145,8 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
     };
   }, [onClose]);
   const TypeIcon = location.type === 'campsite' ? Tent : location.type === 'ev_charger' ? Zap : Coffee;
-  const visibleFacilities = showAllFacilities ? location.facilities : location.facilities.slice(0, 6);
+  const facilities = Array.isArray(location.facilities) ? location.facilities : [];
+  const visibleFacilities = showAllFacilities ? facilities : facilities.slice(0, 6);
   const reviewCount = location.review_count ?? location.user_ratings_total ?? reviews.length;
   const distanceM = userLocation ? calculateDistance(userLocation[0], userLocation[1], location.lat, location.lng) : null;
   const openingHoursLines = formatOpeningHours(location.opening_hours ?? null);
@@ -235,21 +249,21 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
           </div>
 
           {/* Quick info row: price + facilities as chips */}
-          {(priceLabel || location.facilities.length > 0) && (
+          {(priceLabel || facilities.length > 0) && (
             <div className="flex flex-wrap items-center gap-2 mb-4">
               {priceLabel && (
                 <span className="px-2.5 py-1 rounded-lg bg-neutral-800 text-neutral-300 text-sm font-medium">
                   {priceLabel === 'Free' ? '💷 Free' : `💷 ${priceLabel}`}
                 </span>
               )}
-              {location.facilities.slice(0, 4).map((f, i) => (
+              {facilities.slice(0, 4).map((f, i) => (
                 <span key={i} className="px-2.5 py-1 rounded-lg bg-neutral-800 text-neutral-300 text-sm">
-                  {f}
+                  {f ?? ''}
                 </span>
               ))}
-              {location.facilities.length > 4 && (
+              {facilities.length > 4 && (
                 <span className="px-2.5 py-1 rounded-lg bg-neutral-800 text-neutral-400 text-sm">
-                  +{location.facilities.length - 4}
+                  +{facilities.length - 4}
                 </span>
               )}
             </div>
@@ -275,7 +289,7 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
 
           {/* Description */}
           <p className="text-neutral-400 text-sm leading-relaxed mb-5">
-            {location.description}
+            {location.description ?? ''}
           </p>
 
           {/* Contact section */}
@@ -285,14 +299,14 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
               <div className="space-y-2">
                 {location.phone && (
                   <a
-                    href={`tel:${location.phone.replace(/\s/g, '')}`}
+                    href={`tel:${String(location.phone).replace(/\s/g, '')}`}
                     className="flex items-center gap-3 p-3 bg-neutral-800/50 rounded-xl text-neutral-300 hover:bg-neutral-700/50 transition-colors"
                   >
                     <Phone className="w-5 h-5 text-green-400 shrink-0" />
-                    <span className="text-sm">{location.phone}</span>
+                    <span className="text-sm">{String(location.phone)}</span>
                   </a>
                 )}
-                {location.website && (
+                {location.website && typeof location.website === 'string' && (
                   <a
                     href={location.website.startsWith('http') ? location.website : `https://${location.website}`}
                     target="_blank"
@@ -347,15 +361,15 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
                   key={i}
                   className="px-3 py-1.5 bg-neutral-800 rounded-full text-sm text-neutral-300"
                 >
-                  {facility}
+                  {facility ?? ''}
                 </span>
               ))}
-              {location.facilities.length > 6 && !showAllFacilities && (
+              {facilities.length > 6 && !showAllFacilities && (
                 <button
                   onClick={() => setShowAllFacilities(true)}
                   className="px-3 py-1.5 bg-neutral-800 rounded-full text-sm text-green-500 hover:bg-neutral-700 transition-colors"
                 >
-                  +{location.facilities.length - 6} more
+                  +{facilities.length - 6} more
                 </button>
               )}
             </div>
