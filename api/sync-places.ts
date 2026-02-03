@@ -29,6 +29,8 @@ const MAX_PAGES_PER_CELL_TYPE = 2;
 const MAX_GOOGLE_REQUESTS_PER_TYPE = 40;
 /** Max Place Details calls per enrich_photos run to stay under 60s (~200 * 0.3s). */
 const MAX_PLACE_DETAILS_PER_ENRICH_RUN = 200;
+/** EV charger upsert batch size to stay under 60s (one big upsert of ~10k rows times out). */
+const EV_UPSERT_BATCH_SIZE = 1000;
 
 /** UK bounds – fetch ALL locations for entire UK. */
 const SYNC_BOUNDS = { swLat: 49.8, swLng: -8.6, neLat: 60.9, neLng: 1.8 };
@@ -435,14 +437,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (ocmRows.length === 0) {
         return res.status(200).json({ ok: true, type: 'ev_only', upserted: 0, message: 'No EV chargers fetched' });
       }
-      const { error } = await supabase
-        .from('locations')
-        .upsert(ocmRows, {
-          onConflict: ['external_source', 'external_id'],
-        });
-      if (error) {
-        console.error('Supabase upsert error:', error);
-        return res.status(500).json({ error: error.message, code: error.code });
+      for (let i = 0; i < ocmRows.length; i += EV_UPSERT_BATCH_SIZE) {
+        const batch = ocmRows.slice(i, i + EV_UPSERT_BATCH_SIZE);
+        const { error } = await supabase
+          .from('locations')
+          .upsert(batch, {
+            onConflict: ['external_source', 'external_id'],
+          });
+        if (error) {
+          console.error('Supabase upsert error:', error);
+          return res.status(500).json({ error: error.message, code: error.code });
+        }
       }
       return res.status(200).json({ ok: true, type: 'ev_only', upserted: ocmRows.length });
     }
