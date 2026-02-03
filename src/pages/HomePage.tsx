@@ -10,7 +10,7 @@ import { useRouteGeometry } from '@/hooks/useRouteGeometry';
 import { useSavedPlaces } from '@/hooks/useSavedPlaces';
 import { usePlacesInBounds } from '@/hooks/usePlacesInBounds';
 import { sampleLocations } from '@/data/locations';
-import type { Bounds } from '@/services/placesApi';
+import { type Bounds, DEFAULT_UK_BOUNDS } from '@/services/placesApi';
 import { Location, LocationType, Review } from '@/types';
 import { cn } from '@/lib/utils';
 import { Route } from 'lucide-react';
@@ -49,7 +49,7 @@ export default function HomePage() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [routeStops, setRouteStops] = useState<Location[]>([]);
   const [routePanelOpen, setRoutePanelOpen] = useState(false);
-  const [bounds, setBounds] = useState<Bounds | null>(null);
+  const [bounds, setBounds] = useState<Bounds | null>(DEFAULT_UK_BOUNDS);
   const { addSaved, removeSaved, isSaved } = useSavedPlaces();
   const { locations: apiLocations } = usePlacesInBounds(bounds);
 
@@ -94,8 +94,8 @@ export default function HomePage() {
 
   const { positions: routePositions } = useRouteGeometry(userLocation, routeStops);
 
-  // Use real-world data when we have bounds and API returned results; otherwise sample data
-  const baseLocations = (bounds && apiLocations.length > 0) ? apiLocations : sampleLocations;
+  // Prefer real-world data whenever we have any from the API; otherwise sample data
+  const baseLocations = apiLocations.length > 0 ? apiLocations : sampleLocations;
 
   // Filter locations
   const filteredLocations = useMemo(() => {

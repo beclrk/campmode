@@ -5,6 +5,12 @@ export interface Bounds {
   ne: [number, number];
 }
 
+/** Default UK bounds so we fetch real data on load before the map reports. */
+export const DEFAULT_UK_BOUNDS: Bounds = {
+  sw: [49.8, -8.6],
+  ne: [60.9, 1.8],
+};
+
 /** Fetch all places in bounds from our API (Google Places + Open Charge Map, merged server-side so CORS is not an issue). */
 export async function fetchGooglePlacesInBounds(bounds: Bounds): Promise<Location[]> {
   const { sw, ne } = bounds;
