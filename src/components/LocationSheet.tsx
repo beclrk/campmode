@@ -168,12 +168,8 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
   };
 
   const handleOpenInGoogle = () => {
-    if (location.google_place_id) {
-      window.open(`https://www.google.com/maps/place/?q=place_id:${location.google_place_id}`, '_blank');
-    } else {
-      const query = [location.name, location.address].filter(Boolean).join(' ') || `${location.lat},${location.lng}`;
-      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank');
-    }
+    const query = [location.name, location.address].filter(Boolean).join(' ') || `${location.lat},${location.lng}`;
+    window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
   };
 
   const handleWebsite = () => {
