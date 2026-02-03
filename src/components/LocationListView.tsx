@@ -1,4 +1,4 @@
-import { Tent, Zap, Coffee, Crown } from 'lucide-react';
+import { Tent, Zap, Coffee, Star, Crown } from 'lucide-react';
 import { Location } from '@/types';
 import { getLocationTypeColor, getLocationTypeLabel, formatDistanceMiles, cn } from '@/lib/utils';
 import { calculateDistance } from '@/lib/utils';
@@ -8,6 +8,7 @@ const TYPE_ICONS = { campsite: Tent, rest_stop: Coffee, ev_charger: Zap };
 interface LocationListViewProps {
   locations: Location[];
   top10PercentIds: Set<string>;
+  crownIds: Set<string>;
   onSelect: (location: Location) => void;
   userLocation: [number, number] | null;
 }
@@ -15,6 +16,7 @@ interface LocationListViewProps {
 export default function LocationListView({
   locations,
   top10PercentIds,
+  crownIds,
   onSelect,
   userLocation,
 }: LocationListViewProps) {
@@ -26,6 +28,7 @@ export default function LocationListView({
           const Icon = TYPE_ICONS[type] ?? Tent;
           const color = getLocationTypeColor(type);
           const isTop10 = top10PercentIds.has(loc.id);
+          const hasCrown = crownIds.has(loc.id);
           const reviewCount = loc.review_count ?? loc.user_ratings_total ?? 0;
           const distance =
             userLocation != null
@@ -52,9 +55,18 @@ export default function LocationListView({
                   </div>
                   {isTop10 && (
                     <span
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center bg-amber-400/90 text-amber-900 shadow"
+                      className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full flex items-center justify-center bg-amber-400/90 text-amber-900 shadow"
                       title="Top 10% in category"
                       aria-label="Top 10% in category"
+                    >
+                      <Star className="w-3 h-3" fill="currentColor" strokeWidth={0} />
+                    </span>
+                  )}
+                  {hasCrown && (
+                    <span
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center bg-amber-400/90 text-amber-900 shadow"
+                      title="5+ photos"
+                      aria-label="5+ photos"
                     >
                       <Crown className="w-3 h-3" strokeWidth={2.5} />
                     </span>

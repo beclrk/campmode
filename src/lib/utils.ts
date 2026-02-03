@@ -109,7 +109,7 @@ export function normalizeLocationType(type: string): 'campsite' | 'rest_stop' | 
   return 'campsite';
 }
 
-/** Top 10% of each category by quality score. Returns Set of location ids. */
+/** Top 10% of each category by quality score — show gold star badge on these. */
 export function getTop10PercentIds(
   locations: Array<{
     id: string;
@@ -131,6 +131,17 @@ export function getTop10PercentIds(
     const sorted = [...list].sort((a, b) => qualityScore(b) - qualityScore(a));
     const n = Math.max(1, Math.ceil(sorted.length * 0.1));
     for (let i = 0; i < n; i++) ids.add(sorted[i].id);
+  }
+  return ids;
+}
+
+/** Location ids that have at least 5 photos — show gold crown badge on these. */
+export function getIdsWithFiveOrMorePhotos(
+  locations: Array<{ id: string; images?: string[] }>
+): Set<string> {
+  const ids = new Set<string>();
+  for (const loc of locations) {
+    if ((loc.images?.length ?? 0) >= 5) ids.add(loc.id);
   }
   return ids;
 }

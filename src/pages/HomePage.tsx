@@ -12,7 +12,7 @@ import { useSavedPlaces } from '@/hooks/useSavedPlaces';
 import { usePlacesInBounds } from '@/hooks/usePlacesInBounds';
 import { type Bounds, DEFAULT_UK_BOUNDS } from '@/services/placesApi';
 import { Location, LocationType, Review } from '@/types';
-import { cn, qualityScore, getTop10PercentIds, normalizeLocationType } from '@/lib/utils';
+import { cn, qualityScore, getTop10PercentIds, getIdsWithFiveOrMorePhotos, normalizeLocationType } from '@/lib/utils';
 import { Route, Map as MapIcon, List } from 'lucide-react';
 
 // Sample reviews - in production these come from Supabase
@@ -185,8 +185,9 @@ export default function HomePage() {
     return [...filteredLocations].sort((a, b) => qualityScore(b) - qualityScore(a));
   }, [filteredLocations]);
 
-  // Top 10% per category (campsite, rest_stop, ev_charger) by quality — for crown badge on map and list
+  // Gold star: top 10% per category by quality; gold crown: 5+ photos
   const top10PercentIds = useMemo(() => getTop10PercentIds(filteredLocations), [filteredLocations]);
+  const crownIds = useMemo(() => getIdsWithFiveOrMorePhotos(filteredLocations), [filteredLocations]);
 
   const counts = useMemo(() => ({
     campsite: baseLocations.filter((l) => normalizeLocationType(l.type ?? '') === 'campsite').length,
@@ -229,6 +230,7 @@ export default function HomePage() {
           onBasemapChange={setBasemap}
           osApiKey={import.meta.env.VITE_OS_API_KEY}
           top10PercentIds={top10PercentIds}
+          crownIds={crownIds}
         />
       </div>
 
@@ -238,6 +240,7 @@ export default function HomePage() {
           <LocationListView
             locations={locationsSortedByQuality}
             top10PercentIds={top10PercentIds}
+            crownIds={crownIds}
             onSelect={setSelectedLocation}
             userLocation={userLocation}
           />

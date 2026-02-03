@@ -22,8 +22,10 @@ interface MapViewProps {
   onBasemapChange?: (basemap: BasemapId) => void;
   /** OS Maps API key (VITE_OS_API_KEY). When set, OS layer options are shown. */
   osApiKey?: string;
-  /** Location ids in top 10% per category — show gold/crown badge on these markers. */
+  /** Location ids in top 10% per category by quality — show gold star badge. */
   top10PercentIds?: Set<string>;
+  /** Location ids with 5+ photos — show gold crown badge. */
+  crownIds?: Set<string>;
 }
 
 interface ClusterPoint {
@@ -37,15 +39,19 @@ const CLUSTER_RADIUS = 60;
 const CLUSTER_MAX_ZOOM = 16;
 const CLUSTER_MIN_ZOOM = 2;
 
-// Crown icon for top-10% badge (gold circle + crown shape)
+// Gold star badge (top 10% by quality) — top-left
+const STAR_BADGE_HTML = (iconSize: number) =>
+  `<span style="position:absolute;top:-6px;left:-6px;width:${iconSize}px;height:${iconSize}px;border-radius:50%;background:linear-gradient(135deg,#fbbf24,#f59e0b);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.4);border:2px solid #fef3c7;"><svg width="${iconSize - 4}" height="${iconSize - 4}" viewBox="0 0 24 24" fill="#fff" stroke="#f59e0b" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>`;
+// Gold crown badge (5+ photos) — top-right
 const CROWN_BADGE_HTML = (iconSize: number) =>
   `<span style="position:absolute;top:-6px;right:-6px;width:${iconSize}px;height:${iconSize}px;border-radius:50%;background:linear-gradient(135deg,#fbbf24,#f59e0b);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.4);border:2px solid #fef3c7;"><svg width="${iconSize - 4}" height="${iconSize - 4}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L14 9h6l-5 3.5 2 6.5L12 15l-5 4 2-6.5L4 9h6L12 2z"/></svg></span>`;
 
-function createMarkerIcon(type: string, isSelected: boolean, isTop10: boolean) {
+function createMarkerIcon(type: string, isSelected: boolean, isTop10: boolean, isCrown: boolean) {
   const color = getLocationTypeColor(type);
   const size = isSelected ? 44 : 36;
   const innerSize = isSelected ? 20 : 16;
-  const crownBadge = isTop10 ? CROWN_BADGE_HTML(18) : '';
+  const starBadge = isTop10 ? STAR_BADGE_HTML(18) : '';
+  const crownBadge = isCrown ? CROWN_BADGE_HTML(18) : '';
   return L.divIcon({
     className: 'custom-marker',
     html: `
@@ -60,6 +66,7 @@ function createMarkerIcon(type: string, isSelected: boolean, isTop10: boolean) {
           transition: all 0.2s ease;
           ${isSelected ? 'transform: scale(1.1);' : ''}
         ">${getMarkerSvg(type, isSelected ? 'white' : color, innerSize)}</div>
+        ${starBadge}
         ${crownBadge}
       </div>
     `,
@@ -256,16 +263,18 @@ const LocationMarker = memo(function LocationMarker({
   isSelected,
   onSelect,
   isTop10,
+  isCrown,
 }: {
   location: Location;
   isSelected: boolean;
   onSelect: (location: Location) => void;
   isTop10?: boolean;
+  isCrown?: boolean;
 }) {
   return (
     <Marker
       position={[location.lat, location.lng]}
-      icon={createMarkerIcon(location.type ?? '', isSelected, isTop10 ?? false)}
+      icon={createMarkerIcon(location.type ?? '', isSelected, isTop10 ?? false, isCrown ?? false)}
       zIndexOffset={getMarkerZIndexOffset(location.type ?? '')}
       eventHandlers={{ click: () => onSelect(location) }}
     />
@@ -277,11 +286,13 @@ function ClusterLayer({
   selectedLocation,
   onLocationSelect,
   top10PercentIds,
+  crownIds,
 }: {
   locations: Location[];
   selectedLocation: Location | null;
   onLocationSelect: (location: Location) => void;
   top10PercentIds?: Set<string>;
+  crownIds?: Set<string>;
 }) {
   const map = useMap();
   const [clusters, setClusters] = useState<ClusterPoint[]>([]);
@@ -356,6 +367,7 @@ function ClusterLayer({
                         isSelected={selectedLocation?.id === loc.id}
                         onSelect={onLocationSelect}
                         isTop10={top10PercentIds?.has(loc.id)}
+                        isCrown={crownIds?.has(loc.id)}
                       />
                     );
                   })}
@@ -400,6 +412,7 @@ function ClusterLayer({
             isSelected={selectedLocation?.id === loc.id}
             onSelect={onLocationSelect}
             isTop10={top10PercentIds?.has(loc.id)}
+            isCrown={crownIds?.has(loc.id)}
           />
         );
       })}
@@ -420,6 +433,7 @@ export default function MapView({
   onBasemapChange,
   osApiKey,
   top10PercentIds,
+  crownIds,
 }: MapViewProps) {
   const defaultCenter: [number, number] = [54.5, -3.5];
   const defaultZoom = 6;
@@ -464,6 +478,7 @@ export default function MapView({
         selectedLocation={selectedLocation}
         onLocationSelect={onLocationSelect}
         top10PercentIds={top10PercentIds}
+        crownIds={crownIds}
       />
       {userLocation && <Marker position={userLocation} icon={createUserMarker()} />}
     </MapContainer>
