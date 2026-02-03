@@ -71,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     while (hasMore) {
       const { data: rows, error } = await supabase
         .from('locations')
-        .select('id, name, type, lat, lng, description, address, price, facilities, images, website, phone, google_place_id, external_id, external_source, created_at, updated_at')
+        .select('id, name, type, lat, lng, description, address, price, facilities, images, website, phone, google_place_id, external_id, external_source, rating, review_count, price_level, opening_hours, created_at, updated_at')
         .gte('lat', cSwLat)
         .lte('lat', cNeLat)
         .gte('lng', cSwLng)
@@ -107,6 +107,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         google_place_id?: string | null;
         external_id: string;
         external_source: string;
+        rating?: number | null;
+        review_count?: number | null;
+        price_level?: number | null;
+        opening_hours?: unknown;
         created_at: string;
         updated_at: string;
       }) => ({
@@ -123,6 +127,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ocm_id: r.external_source === 'open_charge_map' ? parseInt(String(r.external_id), 10) : undefined,
         website: r.website ?? undefined,
         phone: r.phone ?? undefined,
+        rating: r.rating != null ? Number(r.rating) : undefined,
+        user_ratings_total: r.review_count != null ? Number(r.review_count) : undefined,
+        review_count: r.review_count != null ? Number(r.review_count) : undefined,
+        price_level: r.price_level != null ? Number(r.price_level) : undefined,
+        opening_hours: r.opening_hours ?? undefined,
         created_at: r.created_at ?? now,
         updated_at: r.updated_at ?? now,
       }));

@@ -65,6 +65,10 @@ interface SupabaseLocationRow {
   google_place_id?: string | null;
   external_id: string;
   external_source: ExternalSource;
+  rating?: number | null;
+  review_count?: number | null;
+  price_level?: number | null;
+  opening_hours?: unknown;
   created_at: string;
   updated_at: string;
 }
@@ -222,6 +226,10 @@ async function fetchAllGoogleUK(key: string): Promise<SupabaseLocationRow[]> {
             google_place_id: r.place_id,
             external_id: r.place_id,
             external_source: 'google',
+            rating: r.rating != null ? Number(r.rating) : null,
+            review_count: r.user_ratings_total != null ? Number(r.user_ratings_total) : null,
+            price_level: null,
+            opening_hours: null,
             created_at: now,
             updated_at: now,
           };

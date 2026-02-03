@@ -18,25 +18,50 @@ import {
   User as UserIcon,
   ExternalLink
 } from 'lucide-react';
-import { cn, formatDate, getLocationTypeColor, getLocationTypeLabel } from '@/lib/utils';
+import { cn, formatDate, getLocationTypeColor, getLocationTypeLabel, calculateDistance, formatDistanceMiles, getPriceLevelLabel } from '@/lib/utils';
+import type { OpeningHours } from '@/types';
 
 interface LocationSheetProps {
   location: Location;
   onClose: () => void;
   reviews: Review[];
+  /** For "Distance: X mi away" */
+  userLocation?: [number, number] | null;
   isInRoute?: boolean;
   onAddToRoute?: () => void;
   onRemoveFromRoute?: () => void;
   isSaved?: boolean;
   onSave?: () => void;
   onUnsave?: () => void;
+  onAddToTrip?: () => void;
 }
 
 const DRAG_CLOSE_THRESHOLD = 100;
 
-export default function LocationSheet({ location, onClose, reviews, isInRoute, onAddToRoute, onRemoveFromRoute, isSaved, onSave, onUnsave }: LocationSheetProps) {
+function formatOpeningHours(hours: OpeningHours): string[] {
+  if (!hours) return [];
+  if (typeof hours === 'string') return [hours];
+  return hours.map((h) => (typeof h === 'object' && h.hours) ? h.hours : (typeof h === 'object' && h.open != null && h.close != null) ? `${h.open}-${h.close}` : '').filter(Boolean);
+}
+
+function isOpenNow(hours: OpeningHours): boolean | null {
+  if (!hours || typeof hours !== 'object' || !Array.isArray(hours)) return null;
+  const now = new Date();
+  const day = now.getDay();
+  const time = now.getHours() * 60 + now.getMinutes();
+  const today = hours.find((h) => h.day === day);
+  if (!today || today.open == null || today.close == null) return null;
+  const [openH, openM] = [parseInt(today.open.slice(0, 2), 10), parseInt(today.open.slice(2), 10)];
+  const [closeH, closeM] = [parseInt(today.close.slice(0, 2), 10), parseInt(today.close.slice(2), 10)];
+  const openMins = openH * 60 + openM;
+  const closeMins = closeH * 60 + closeM;
+  return time >= openMins && time <= closeMins;
+}
+
+export default function LocationSheet({ location, onClose, reviews, userLocation, isInRoute, onAddToRoute, onRemoveFromRoute, isSaved, onSave, onUnsave, onAddToTrip }: LocationSheetProps) {
   const [isReviewsOpen, setIsReviewsOpen] = useState(false);
   const [showAllFacilities, setShowAllFacilities] = useState(false);
+  const [isHoursOpen, setIsHoursOpen] = useState(false);
   const handleRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef(0);
@@ -107,8 +132,12 @@ export default function LocationSheet({ location, onClose, reviews, isInRoute, o
     };
   }, [onClose]);
   const TypeIcon = location.type === 'campsite' ? Tent : location.type === 'ev_charger' ? Zap : Coffee;
-  
   const visibleFacilities = showAllFacilities ? location.facilities : location.facilities.slice(0, 6);
+  const reviewCount = location.review_count ?? location.user_ratings_total ?? reviews.length;
+  const distanceM = userLocation ? calculateDistance(userLocation[0], userLocation[1], location.lat, location.lng) : null;
+  const openingHoursLines = formatOpeningHours(location.opening_hours ?? null);
+  const openNow = isOpenNow(location.opening_hours ?? null);
+  const priceLabel = getPriceLevelLabel(location.price_level, location.price);
 
   const handleNavigate = () => {
     window.open(
@@ -165,7 +194,7 @@ export default function LocationSheet({ location, onClose, reviews, isInRoute, o
 
         {/* Content - flex-1 min-h-0 gives definite height so swipe-to-scroll works on mobile */}
         <div className="flex-1 min-h-0 px-5 pb-28 hide-scrollbar sheet-scroll">
-          {/* Header */}
+          {/* Header: icon, type badge, name, rating, distance, price */}
           <div className="flex items-start gap-4 mb-4">
             <div 
               className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
@@ -174,38 +203,140 @@ export default function LocationSheet({ location, onClose, reviews, isInRoute, o
               <TypeIcon className="w-7 h-7" style={{ color: typeColor }} />
             </div>
             <div className="flex-1 min-w-0 pr-8">
-              <div 
-                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mb-1"
-                style={{ backgroundColor: `${typeColor}20`, color: typeColor }}
-              >
-                {getLocationTypeLabel(location.type)}
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <span 
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                  style={{ backgroundColor: `${typeColor}20`, color: typeColor }}
+                >
+                  {getLocationTypeLabel(location.type)}
+                </span>
+                {location.rating != null && (
+                  <span className="inline-flex items-center gap-1 text-sm">
+                    <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                    <span className="text-white font-medium">{Number(location.rating).toFixed(1)}</span>
+                    {reviewCount > 0 && (
+                      <span className="text-neutral-500">({reviewCount})</span>
+                    )}
+                  </span>
+                )}
               </div>
               <h2 className="text-xl font-bold text-white truncate">{location.name}</h2>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                  <span className="text-white font-medium">4.8</span>
-                  <span className="text-neutral-500 text-sm">({reviews.length} reviews)</span>
+              {(distanceM != null || priceLabel) && (
+                <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-neutral-400">
+                  {distanceM != null && (
+                    <span>Distance: {formatDistanceMiles(distanceM)} away</span>
+                  )}
+                  {priceLabel && (
+                    <span className="text-green-500 font-medium">{priceLabel}</span>
+                  )}
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
-          {/* Address */}
-          <div className="flex items-start gap-3 mb-4 p-3 bg-neutral-800/50 rounded-xl">
+          {/* Quick info row: price + facilities as chips */}
+          {(priceLabel || location.facilities.length > 0) && (
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              {priceLabel && (
+                <span className="px-2.5 py-1 rounded-lg bg-neutral-800 text-neutral-300 text-sm font-medium">
+                  {priceLabel === 'Free' ? '💷 Free' : `💷 ${priceLabel}`}
+                </span>
+              )}
+              {location.facilities.slice(0, 4).map((f, i) => (
+                <span key={i} className="px-2.5 py-1 rounded-lg bg-neutral-800 text-neutral-300 text-sm">
+                  {f}
+                </span>
+              ))}
+              {location.facilities.length > 4 && (
+                <span className="px-2.5 py-1 rounded-lg bg-neutral-800 text-neutral-400 text-sm">
+                  +{location.facilities.length - 4}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Address - clickable to open in maps */}
+          <div 
+            className="flex items-start gap-3 mb-4 p-3 bg-neutral-800/50 rounded-xl"
+            role="button"
+            tabIndex={0}
+            onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.address || `${location.lat},${location.lng}`)}`, '_blank')}
+            onKeyDown={(e) => e.key === 'Enter' && (window as Window & { open: (u: string) => void }).open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.address || `${location.lat},${location.lng}`)}`, '_blank')}
+          >
             <MapPin className="w-5 h-5 text-neutral-400 shrink-0 mt-0.5" />
             <div>
-              <p className="text-neutral-300 text-sm">{location.address}</p>
-              {location.price && (
+              <p className="text-neutral-300 text-sm">{location.address || 'Address not listed'}</p>
+              {location.price && !priceLabel && (
                 <p className="text-green-500 font-semibold mt-1">{location.price}</p>
               )}
             </div>
+            <ExternalLink className="w-4 h-4 text-neutral-500 shrink-0 mt-0.5" />
           </div>
 
           {/* Description */}
           <p className="text-neutral-400 text-sm leading-relaxed mb-5">
             {location.description}
           </p>
+
+          {/* Contact section */}
+          {(location.phone || location.website) && (
+            <div className="mb-5">
+              <h3 className="text-white font-semibold mb-3">Contact</h3>
+              <div className="space-y-2">
+                {location.phone && (
+                  <a
+                    href={`tel:${location.phone.replace(/\s/g, '')}`}
+                    className="flex items-center gap-3 p-3 bg-neutral-800/50 rounded-xl text-neutral-300 hover:bg-neutral-700/50 transition-colors"
+                  >
+                    <Phone className="w-5 h-5 text-green-400 shrink-0" />
+                    <span className="text-sm">{location.phone}</span>
+                  </a>
+                )}
+                {location.website && (
+                  <a
+                    href={location.website.startsWith('http') ? location.website : `https://${location.website}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 bg-neutral-800/50 rounded-xl text-neutral-300 hover:bg-neutral-700/50 transition-colors"
+                  >
+                    <Globe className="w-5 h-5 text-blue-400 shrink-0" />
+                    <span className="text-sm truncate">{location.website.replace(/^https?:\/\//, '')}</span>
+                    <ExternalLink className="w-4 h-4 shrink-0 ml-auto" />
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Opening hours - collapsible */}
+          {(openingHoursLines.length > 0 || openNow !== null) && (
+            <div className="mb-5">
+              <button
+                type="button"
+                onClick={() => setIsHoursOpen((o) => !o)}
+                className="w-full flex items-center justify-between text-left"
+              >
+                <h3 className="text-white font-semibold">Opening hours</h3>
+                <ChevronDown className={cn("w-5 h-5 text-neutral-400 transition-transform", isHoursOpen && "rotate-180")} />
+              </button>
+              {openNow !== null && (
+                <span className={cn(
+                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium mt-2",
+                  openNow ? "bg-green-500/20 text-green-400" : "bg-neutral-700 text-neutral-400"
+                )}>
+                  <span className="w-2 h-2 rounded-full bg-current" />
+                  {openNow ? 'Open Now' : 'Closed'}
+                </span>
+              )}
+              {isHoursOpen && openingHoursLines.length > 0 && (
+                <div className="mt-3 space-y-1 text-sm text-neutral-400">
+                  {openingHoursLines.map((line, i) => (
+                    <p key={i}>{line}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Facilities */}
           <div className="mb-5">
@@ -277,6 +408,20 @@ export default function LocationSheet({ location, onClose, reviews, isInRoute, o
                   <span className="text-sm font-medium">Add to route</span>
                 </button>
               )}
+            </div>
+          )}
+
+          {/* Add to Trip - foundation for future trips feature */}
+          {onAddToTrip && (
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={onAddToTrip}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-dashed border-neutral-600 text-neutral-300 rounded-xl hover:border-amber-500 hover:text-amber-500 hover:bg-amber-500/5 transition-colors"
+              >
+                <Route className="w-4 h-4" />
+                <span className="text-sm font-medium">Add to trip</span>
+              </button>
             </div>
           )}
 
@@ -374,6 +519,7 @@ export default function LocationSheet({ location, onClose, reviews, isInRoute, o
                               key={i}
                               src={photo}
                               alt=""
+                              loading="lazy"
                               className="w-16 h-16 rounded-lg object-cover"
                             />
                           ))}

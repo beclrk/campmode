@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo, useState, useCallback, memo } from 'react';
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import Supercluster from 'supercluster';
 import { Location } from '@/types';
 import { getLocationTypeColor } from '@/lib/utils';
 import type { Bounds } from '@/services/placesApi';
@@ -11,38 +12,39 @@ interface MapViewProps {
   onLocationSelect: (location: Location) => void;
   center?: [number, number];
   userLocation?: [number, number] | null;
-  /** Road-following route geometry (from user location through stops). When null, no route line is drawn. */
   routePositions?: [number, number][] | null;
-  /** Called when the visible map bounds change (for loading real-world places in view). */
   onBoundsChange?: (bounds: Bounds) => void;
-  /** Called when the map zoom level changes (for prioritising popular places when zoomed out). */
   onZoomChange?: (zoom: number) => void;
 }
 
-// Custom marker icon creator
+interface ClusterPoint {
+  type: 'Feature';
+  id?: number;
+  geometry: { type: 'Point'; coordinates: [number, number] };
+  properties: { location?: Location; cluster?: boolean; point_count?: number; cluster_id?: number };
+}
+
+const CLUSTER_RADIUS = 60;
+const CLUSTER_MAX_ZOOM = 16;
+const CLUSTER_MIN_ZOOM = 2;
+
 function createMarkerIcon(type: string, isSelected: boolean) {
   const color = getLocationTypeColor(type);
   const size = isSelected ? 44 : 36;
   const innerSize = isSelected ? 20 : 16;
-  
   return L.divIcon({
     className: 'custom-marker',
     html: `
       <div style="
-        width: ${size}px;
-        height: ${size}px;
+        width: ${size}px; height: ${size}px;
         background: ${isSelected ? color : 'rgba(10,10,10,0.9)'};
         border: 3px solid ${color};
         border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        display: flex; align-items: center; justify-content: center;
         box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         transition: all 0.2s ease;
         ${isSelected ? 'transform: scale(1.1);' : ''}
-      ">
-        ${getMarkerSvg(type, isSelected ? 'white' : color, innerSize)}
-      </div>
+      ">${getMarkerSvg(type, isSelected ? 'white' : color, innerSize)}</div>
     `,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
@@ -58,14 +60,36 @@ function getMarkerSvg(type: string, color: string, size: number) {
   return icons[type] || icons.campsite;
 }
 
-// User location marker
+function getClusterIcon(count: number) {
+  const size = count >= 50 ? 52 : count >= 11 ? 44 : 36;
+  const bg = 'rgba(30,41,59,0.95)';
+  const border = 'rgba(148,163,184,0.8)';
+  return L.divIcon({
+    className: 'cluster-marker',
+    html: `
+      <div style="
+        width: ${size}px; height: ${size}px;
+        background: ${bg};
+        border: 3px solid ${border};
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        color: #e2e8f0;
+        font-weight: 700;
+        font-size: ${count >= 50 ? 14 : count >= 11 ? 12 : 11}px;
+      ">${count}</div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+}
+
 function createUserMarker() {
   return L.divIcon({
     className: 'custom-marker',
     html: `
       <div style="
-        width: 20px;
-        height: 20px;
+        width: 20px; height: 20px;
         background: #3b82f6;
         border: 4px solid white;
         border-radius: 50%;
@@ -77,55 +101,137 @@ function createUserMarker() {
   });
 }
 
-// Component to handle map movements
-function MapController({ center, selectedLocation }: {
-  center?: [number, number];
-  selectedLocation: Location | null;
-}) {
+function MapController({ center, selectedLocation }: { center?: [number, number]; selectedLocation: Location | null }) {
   const map = useMap();
   const prevSelectedRef = useRef<string | null>(null);
-
   useEffect(() => {
     if (selectedLocation && selectedLocation.id !== prevSelectedRef.current) {
-      map.flyTo([selectedLocation.lat, selectedLocation.lng], 14, {
-        duration: 0.8,
-      });
+      map.flyTo([selectedLocation.lat, selectedLocation.lng], 14, { duration: 0.8 });
       prevSelectedRef.current = selectedLocation.id;
     }
   }, [selectedLocation, map]);
-
   useEffect(() => {
-    if (center) {
-      map.flyTo(center, 12, { duration: 0.8 });
-    }
+    if (center) map.flyTo(center, 12, { duration: 0.8 });
   }, [center, map]);
-
   return null;
 }
 
-function BoundsReporter({
-  onBoundsChange,
-  onZoomChange,
-}: {
-  onBoundsChange: (bounds: Bounds) => void;
-  onZoomChange?: (zoom: number) => void;
-}) {
+function BoundsReporter({ onBoundsChange, onZoomChange }: { onBoundsChange: (bounds: Bounds) => void; onZoomChange?: (zoom: number) => void }) {
   const map = useMap();
-  const report = () => {
+  const report = useCallback(() => {
     const b = map.getBounds();
     const sw = b.getSouthWest();
     const ne = b.getNorthEast();
     onBoundsChange({ sw: [sw.lat, sw.lng], ne: [ne.lat, ne.lng] });
     onZoomChange?.(map.getZoom());
-  };
+  }, [map, onBoundsChange, onZoomChange]);
   useEffect(() => {
     report();
     map.on('moveend', report);
-    return () => {
-      map.off('moveend', report);
-    };
-  }, [map, onBoundsChange, onZoomChange]);
+    return () => map.off('moveend', report);
+  }, [map, report]);
   return null;
+}
+
+const LocationMarker = memo(function LocationMarker({
+  location,
+  isSelected,
+  onSelect,
+}: {
+  location: Location;
+  isSelected: boolean;
+  onSelect: (location: Location) => void;
+}) {
+  return (
+    <Marker
+      position={[location.lat, location.lng]}
+      icon={createMarkerIcon(location.type, isSelected)}
+      eventHandlers={{ click: () => onSelect(location) }}
+    />
+  );
+});
+
+function ClusterLayer({
+  locations,
+  selectedLocation,
+  onLocationSelect,
+}: {
+  locations: Location[];
+  selectedLocation: Location | null;
+  onLocationSelect: (location: Location) => void;
+}) {
+  const map = useMap();
+  const [clusters, setClusters] = useState<ClusterPoint[]>([]);
+
+  const index = useMemo(() => {
+    const supercluster = new Supercluster<{ location: Location }>({
+      radius: CLUSTER_RADIUS,
+      maxZoom: CLUSTER_MAX_ZOOM,
+      minZoom: CLUSTER_MIN_ZOOM,
+    });
+    const points = locations.map((loc) => ({
+      type: 'Feature' as const,
+      properties: { location: loc },
+      geometry: { type: 'Point' as const, coordinates: [loc.lng, loc.lat] as [number, number] },
+    }));
+    supercluster.load(points);
+    return supercluster;
+  }, [locations]);
+
+  const updateClusters = useCallback(() => {
+    const b = map.getBounds();
+    const sw = b.getSouthWest();
+    const ne = b.getNorthEast();
+    const zoom = map.getZoom();
+    const bbox: [number, number, number, number] = [sw.lng, sw.lat, ne.lng, ne.lat];
+    const result = index.getClusters(bbox, zoom);
+    setClusters(result as ClusterPoint[]);
+  }, [map, index]);
+
+  useEffect(() => {
+    updateClusters();
+    map.on('moveend', updateClusters);
+    map.on('zoomend', updateClusters);
+    return () => {
+      map.off('moveend', updateClusters);
+      map.off('zoomend', updateClusters);
+    };
+  }, [map, updateClusters]);
+
+  return (
+    <>
+      {clusters.map((feature) => {
+        const [lng, lat] = feature.geometry.coordinates;
+        const props = feature.properties;
+        if (props.cluster) {
+          const count = props.point_count ?? 0;
+          return (
+            <Marker
+              key={`cluster-${feature.id}`}
+              position={[lat, lng]}
+              icon={getClusterIcon(count)}
+              eventHandlers={{
+                click: () => {
+                  const expansionZoom = Math.min(index.getClusterExpansionZoom(feature.id as number), 18);
+                  map.flyTo([lat, lng], expansionZoom, { duration: 0.3 });
+                },
+              }}
+            />
+          );
+        }
+        const loc = props.location;
+        if (!loc) return null;
+        return (
+          <LocationMarker
+            key={loc.id}
+            location={loc}
+            isSelected={selectedLocation?.id === loc.id}
+            onSelect={onLocationSelect}
+          />
+        );
+      })}
+    </>
+  );
 }
 
 export default function MapView({
@@ -138,7 +244,6 @@ export default function MapView({
   onBoundsChange,
   onZoomChange,
 }: MapViewProps) {
-  // UK center
   const defaultCenter: [number, number] = [54.5, -3.5];
   const defaultZoom = 6;
 
@@ -150,52 +255,24 @@ export default function MapView({
       zoomControl={false}
       attributionControl={false}
     >
-      {/* Dark map tiles */}
       <TileLayer
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       />
-
-      {/* Map controller for animations */}
       <MapController center={center} selectedLocation={selectedLocation} />
-
-      {/* Report bounds and zoom for loading / prioritising places */}
-      {onBoundsChange && (
-        <BoundsReporter onBoundsChange={onBoundsChange} onZoomChange={onZoomChange} />
-      )}
-
-      {/* Route line - follows roads from user location through each stop */}
+      {onBoundsChange && <BoundsReporter onBoundsChange={onBoundsChange} onZoomChange={onZoomChange} />}
       {routePositions && routePositions.length >= 2 && (
         <Polyline
           positions={routePositions}
-          pathOptions={{
-            color: '#22c55e',
-            weight: 4,
-            opacity: 0.9,
-            dashArray: '8, 8',
-          }}
+          pathOptions={{ color: '#22c55e', weight: 4, opacity: 0.9, dashArray: '8, 8' }}
         />
       )}
-
-      {/* Location markers – all emblems visible (campsite, EV charger, rest stop) */}
-      {locations.map((location) => (
-        <Marker
-          key={location.id}
-          position={[location.lat, location.lng]}
-          icon={createMarkerIcon(location.type, selectedLocation?.id === location.id)}
-          eventHandlers={{
-            click: () => onLocationSelect(location),
-          }}
-        />
-      ))}
-
-      {/* User location marker */}
-      {userLocation && (
-        <Marker
-          position={userLocation}
-          icon={createUserMarker()}
-        />
-      )}
+      <ClusterLayer
+        locations={locations}
+        selectedLocation={selectedLocation}
+        onLocationSelect={onLocationSelect}
+      />
+      {userLocation && <Marker position={userLocation} icon={createUserMarker()} />}
     </MapContainer>
   );
 }

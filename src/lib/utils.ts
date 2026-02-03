@@ -14,6 +14,22 @@ export function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(1)}km`;
 }
 
+// Format distance in miles for location card
+export function formatDistanceMiles(meters: number): string {
+  const miles = meters / 1609.344;
+  if (miles < 0.1) return 'Nearby';
+  if (miles < 1) return `${(miles * 10).toFixed(1)} mi`;
+  return `${miles.toFixed(1)} mi`;
+}
+
+// Price level to display string
+export function getPriceLevelLabel(level: number | undefined, price?: string): string {
+  if (price) return price;
+  if (level === undefined || level === null) return '';
+  if (level === 0) return 'Free';
+  return '£'.repeat(Math.min(level, 3));
+}
+
 // Calculate distance between two coordinates (Haversine formula)
 export function calculateDistance(
   lat1: number,

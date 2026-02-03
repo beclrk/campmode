@@ -211,6 +211,7 @@ export default function HomePage() {
           location={selectedLocation}
           onClose={() => setSelectedLocation(null)}
           reviews={locationReviews}
+          userLocation={userLocation}
           isInRoute={isInRoute(selectedLocation)}
           onAddToRoute={() => addToRoute(selectedLocation)}
           onRemoveFromRoute={() => removeFromRoute(selectedLocation)}

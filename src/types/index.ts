@@ -1,6 +1,9 @@
 // Location types
 export type LocationType = 'campsite' | 'ev_charger' | 'rest_stop';
 
+/** Opening hours: array of { day: 0-6 (Sun-Sat), open?: "HHMM", close?: "HHMM" } or free-form string */
+export type OpeningHours = Array<{ day?: number; open?: string; close?: string; hours?: string }> | string | null;
+
 export interface Location {
   id: string;
   name: string;
@@ -10,17 +13,19 @@ export interface Location {
   description: string;
   address: string;
   price?: string;
+  /** 0=free, 1=£, 2=££, 3=£££ */
+  price_level?: number;
   facilities: string[];
   images: string[];
   website?: string;
   phone?: string;
   google_place_id?: string;
-  /** Open Charge Map POI ID – used for "View on Open Charge Map" link when no Google place */
   ocm_id?: number;
-  /** Google rating 1–5; used to prioritise popular places when zoomed out */
   rating?: number;
-  /** Google review count; used with rating for popularity score */
   user_ratings_total?: number;
+  /** Review count (alias for user_ratings_total or from DB) */
+  review_count?: number;
+  opening_hours?: OpeningHours;
   created_at: string;
   updated_at: string;
 }
