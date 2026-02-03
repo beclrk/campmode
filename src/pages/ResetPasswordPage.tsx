@@ -46,15 +46,19 @@ export default function ResetPasswordPage() {
       return;
     }
     setLoading(true);
-    const { error: updateError } = await supabase.auth.updateUser({ password });
+    const { data, error: updateError } = await supabase.auth.updateUser({ password });
     setLoading(false);
     if (updateError) {
       setError(updateError.message);
       return;
     }
+    const userEmail = data?.user?.email ?? '';
     setSuccess(true);
     window.history.replaceState(null, '', window.location.pathname);
-    setTimeout(() => navigate('/', { replace: true }), 1500);
+    setTimeout(async () => {
+      await supabase.auth.signOut();
+      navigate('/login', { replace: true, state: { message: 'Password updated. Sign in with your new password.', email: userEmail } });
+    }, 1500);
   };
 
   if (isRecovery === null) {

@@ -9,13 +9,14 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname;
-  const [mode, setMode] = useState<Mode>('choose');
-  const [email, setEmail] = useState('');
+  const resetState = location.state as { message?: string; email?: string } | null;
+  const [mode, setMode] = useState<Mode>(() => (resetState?.message && resetState?.email ? 'signin' : 'choose'));
+  const [email, setEmail] = useState(() => resetState?.email ?? '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(() => resetState?.message ?? null);
 
   const resetForm = () => {
     setEmail('');
