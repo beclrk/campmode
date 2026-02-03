@@ -252,53 +252,6 @@ function googleResultToRow(r: GooglePlaceResult, googleType: (typeof PLACE_TYPES
   };
 }
 
-/** Fetch Google Places for UK with hard caps (kept for reference; split sync uses fetchGoogleUKByType). */
-async function _fetchAllGoogleUK(key: string): Promise<{ rows: SupabaseLocationRow[]; requestCount: number; capReached: boolean }> {
-  const gridCenters = getUKGridCenters();
-  const byId = new Map<string, SupabaseLocationRow>();
-  const now = new Date().toISOString();
-  let requestCount = 0;
-  let capReached = false;
-
-  for (const type of PLACE_TYPES) {
-    if (capReached) break;
-    for (const { lat: centerLat, lng: centerLng } of gridCenters) {
-      if (requestCount >= MAX_GOOGLE_REQUESTS_PER_SYNC) {
-        capReached = true;
-        break;
-      }
-      let pageToken: string | undefined;
-      let pagesThisCell = 0;
-      do {
-        if (requestCount >= MAX_GOOGLE_REQUESTS_PER_SYNC) {
-          capReached = true;
-          break;
-        }
-        if (pagesThisCell >= MAX_PAGES_PER_CELL_TYPE) break;
-        const { results, next_page_token } = await fetchGooglePage(
-          centerLat,
-          centerLng,
-          type,
-          key,
-          pageToken
-        );
-        requestCount++;
-        pagesThisCell++;
-        for (const r of results) {
-          const row = googleResultToRow(r, type, now);
-          if (row) byId.set(r.place_id, row);
-        }
-        pageToken = next_page_token ?? undefined;
-        if (pageToken) await sleep(GOOGLE_PAGE_DELAY_MS);
-      } while (pageToken);
-    }
-  }
-  if (capReached) {
-    console.warn(`[sync-places] Google request cap reached (${MAX_GOOGLE_REQUESTS_PER_SYNC}). Increase MAX_GOOGLE_REQUESTS_PER_SYNC or run sync less often to control cost.`);
-  }
-  return { rows: Array.from(byId.values()), requestCount, capReached };
-}
-
 /** Fetch one place type only (campground or rest_stop) for UK; cap requests to finish within 60s. */
 async function fetchGoogleUKByType(
   key: string,
@@ -371,53 +324,6 @@ async function fetchPlaceDetailsPhotos(placeId: string, key: string): Promise<st
   return refs;
 }
 
-/**
- * Enrich top 10% highest-rated campsites and rest stops with Place Details photos (in-memory rows).
- * Kept for reference; split sync uses runEnrichPhotosFromSupabase.
- */
-async function _enrichGoogleRowsWithPhotos(rows: SupabaseLocationRow[], key: string): Promise<void> {
-  const hasPlaceId = (r: SupabaseLocationRow) => Boolean(r.google_place_id);
-  const byRating = (a: SupabaseLocationRow, b: SupabaseLocationRow) => {
-    const ra = a.rating ?? 0;
-    const rb = b.rating ?? 0;
-    if (rb !== ra) return rb - ra;
-    const ca = a.review_count ?? 0;
-    const cb = b.review_count ?? 0;
-    return cb - ca;
-  };
-
-  const campsites = rows.filter((r) => r.type === 'campsite' && hasPlaceId(r)).sort(byRating);
-  const restStops = rows.filter((r) => r.type === 'rest_stop' && hasPlaceId(r)).sort(byRating);
-
-  const top10Campsites = campsites.slice(0, Math.max(1, Math.ceil(campsites.length * 0.1)));
-  const top10RestStops = restStops.slice(0, Math.max(1, Math.ceil(restStops.length * 0.1)));
-  const toEnrich = [...top10Campsites, ...top10RestStops];
-
-  console.log('[sync-places] Photo enrichment: places to enrich', toEnrich.length, '(campsites:', top10Campsites.length, ', rest_stops:', top10RestStops.length, ')');
-
-  let refsReturnedCounts: number[] = [];
-  for (let i = 0; i < toEnrich.length; i++) {
-    const row = toEnrich[i];
-    const placeId = row.google_place_id!;
-    await sleep(i === 0 ? 0 : PLACE_DETAILS_DELAY_MS);
-    const refs = await fetchPlaceDetailsPhotos(placeId, key);
-    refsReturnedCounts.push(refs.length);
-    if (refs.length > 0) {
-      row.images = refs.map(
-        (ref) => `/api/place-photo?photo_reference=${encodeURIComponent(ref)}`
-      );
-    }
-  }
-
-  if (toEnrich.length > 0) {
-    const withMultiple = toEnrich.filter((r) => r.images.length > 1).length;
-    const sample = toEnrich.slice(0, 5).map((r) => ({ name: r.name?.slice(0, 30), imagesLength: r.images.length }));
-    console.log('[sync-places] Place Details refs per place (min/median/max):', Math.min(...refsReturnedCounts), '/', refsReturnedCounts[Math.floor(refsReturnedCounts.length / 2)], '/', Math.max(...refsReturnedCounts));
-    console.log('[sync-places] Enriched rows with >1 image:', withMultiple, 'of', toEnrich.length);
-    console.log('[sync-places] Sample final row.images lengths:', sample);
-  }
-}
-
 /** Row shape returned by Supabase locations table (snake_case). */
 type SupabaseLocationDbRow = SupabaseLocationRow;
 
@@ -425,10 +331,7 @@ type SupabaseLocationDbRow = SupabaseLocationRow;
  * Enrich top 10% campsites + rest stops from DB with Place Details photos; cap per run to stay under 60s.
  * Reads from Supabase, fetches Place Details, upserts only enriched rows. Images stored as proxy URLs only.
  */
-async function runEnrichPhotosFromSupabase(
-  supabase: ReturnType<typeof createClient>,
-  key: string
-): Promise<{ enriched: number }> {
+async function runEnrichPhotosFromSupabase(supabase: any, key: string): Promise<{ enriched: number }> {
   const { data: rows, error: selectError } = await supabase
     .from('locations')
     .select('*')
@@ -478,7 +381,7 @@ async function runEnrichPhotosFromSupabase(
   if (toEnrich.length === 0) return { enriched: 0 };
   const { error: upsertError } = await supabase
     .from('locations')
-    .upsert(toEnrich as unknown as Record<string, unknown>[], {
+    .upsert(toEnrich, {
       onConflict: ['external_source', 'external_id'],
     });
   if (upsertError) {
@@ -525,7 +428,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabase = createClient(supabaseUrl, supabaseServiceKey) as any;
 
   try {
     if (syncType === 'ev_only') {
@@ -535,7 +438,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       const { error } = await supabase
         .from('locations')
-        .upsert(ocmRows as unknown as Record<string, unknown>[], {
+        .upsert(ocmRows, {
           onConflict: ['external_source', 'external_id'],
         });
       if (error) {
@@ -556,7 +459,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       const { error } = await supabase
         .from('locations')
-        .upsert(result.rows as unknown as Record<string, unknown>[], {
+        .upsert(result.rows, {
           onConflict: ['external_source', 'external_id'],
         });
       if (error) {
@@ -583,7 +486,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       const { error } = await supabase
         .from('locations')
-        .upsert(result.rows as unknown as Record<string, unknown>[], {
+        .upsert(result.rows, {
           onConflict: ['external_source', 'external_id'],
         });
       if (error) {
