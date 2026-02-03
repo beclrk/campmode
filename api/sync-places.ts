@@ -19,6 +19,11 @@ const GRID_STEP_M = 70000;
 /** Delay (ms) before using next_page_token (Google requirement). */
 const GOOGLE_PAGE_DELAY_MS = 1500;
 
+/** COST CONTROL: Without these caps, one full UK sync can make 1500–3000+ Google requests (~£50–100+ per run). */
+const MAX_GRID_CELLS = 24;
+const MAX_PAGES_PER_CELL_TYPE = 2;
+const MAX_GOOGLE_REQUESTS_PER_SYNC = 400;
+
 /** UK bounds – fetch ALL locations for entire UK. */
 const SYNC_BOUNDS = { swLat: 49.8, swLng: -8.6, neLat: 60.9, neLng: 1.8 };
 
@@ -79,7 +84,7 @@ function toAppType(googleType: string): 'campsite' | 'ev_charger' | 'rest_stop' 
   return 'rest_stop';
 }
 
-/** Full UK grid – no cell limit. Covers entire UK for comprehensive sync. */
+/** UK grid with cap to limit Google API requests (cost control). */
 function getUKGridCenters(): { lat: number; lng: number }[] {
   const { swLat, swLng, neLat, neLng } = SYNC_BOUNDS;
   const centerLat = (swLat + neLat) / 2;
@@ -87,8 +92,14 @@ function getUKGridCenters(): { lat: number; lng: number }[] {
   const lngMetersPerDeg = 111320 * Math.cos((centerLat * Math.PI) / 180);
   const heightM = (neLat - swLat) * latMetersPerDeg;
   const widthM = (neLng - swLng) * lngMetersPerDeg;
-  const rows = Math.max(1, Math.ceil(heightM / GRID_STEP_M));
-  const cols = Math.max(1, Math.ceil(widthM / GRID_STEP_M));
+  let rows = Math.max(1, Math.ceil(heightM / GRID_STEP_M));
+  let cols = Math.max(1, Math.ceil(widthM / GRID_STEP_M));
+  let total = rows * cols;
+  if (total > MAX_GRID_CELLS) {
+    const scale = Math.sqrt(MAX_GRID_CELLS / total);
+    rows = Math.max(1, Math.round(rows * scale));
+    cols = Math.max(1, Math.round(cols * scale));
+  }
   const centers: { lat: number; lng: number }[] = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
@@ -191,16 +202,29 @@ async function fetchGooglePage(
   };
 }
 
-/** Fetch ALL Google Places for UK: full grid + pagination. */
-async function fetchAllGoogleUK(key: string): Promise<SupabaseLocationRow[]> {
+/** Fetch Google Places for UK with hard caps to avoid runaway API cost. */
+async function fetchAllGoogleUK(key: string): Promise<{ rows: SupabaseLocationRow[]; requestCount: number; capReached: boolean }> {
   const gridCenters = getUKGridCenters();
   const byId = new Map<string, SupabaseLocationRow>();
   const now = new Date().toISOString();
+  let requestCount = 0;
+  let capReached = false;
 
   for (const type of PLACE_TYPES) {
+    if (capReached) break;
     for (const { lat: centerLat, lng: centerLng } of gridCenters) {
+      if (requestCount >= MAX_GOOGLE_REQUESTS_PER_SYNC) {
+        capReached = true;
+        break;
+      }
       let pageToken: string | undefined;
+      let pagesThisCell = 0;
       do {
+        if (requestCount >= MAX_GOOGLE_REQUESTS_PER_SYNC) {
+          capReached = true;
+          break;
+        }
+        if (pagesThisCell >= MAX_PAGES_PER_CELL_TYPE) break;
         const { results, next_page_token } = await fetchGooglePage(
           centerLat,
           centerLng,
@@ -208,6 +232,8 @@ async function fetchAllGoogleUK(key: string): Promise<SupabaseLocationRow[]> {
           key,
           pageToken
         );
+        requestCount++;
+        pagesThisCell++;
         for (const r of results) {
           const loc = r.geometry?.location;
           if (!loc) continue;
@@ -240,7 +266,10 @@ async function fetchAllGoogleUK(key: string): Promise<SupabaseLocationRow[]> {
       } while (pageToken);
     }
   }
-  return Array.from(byId.values());
+  if (capReached) {
+    console.warn(`[sync-places] Google request cap reached (${MAX_GOOGLE_REQUESTS_PER_SYNC}). Increase MAX_GOOGLE_REQUESTS_PER_SYNC or run sync less often to control cost.`);
+  }
+  return { rows: Array.from(byId.values()), requestCount, capReached };
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -268,9 +297,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const ocmRows = await fetchAllOcmUK();
     let googleRows: SupabaseLocationRow[] = [];
+    let googleRequestCount = 0;
     const googleKey = process.env.GOOGLE_PLACES_API_KEY;
-    if (googleKey) {
-      googleRows = await fetchAllGoogleUK(googleKey);
+    const googleSyncEnabled = process.env.GOOGLE_PLACES_SYNC_ENABLED !== 'false';
+    if (googleKey && googleSyncEnabled) {
+      const result = await fetchAllGoogleUK(googleKey);
+      googleRows = result.rows;
+      googleRequestCount = result.requestCount;
+      if (result.capReached) {
+        console.warn('[sync-places] Google Places request cap was hit. Sync continued with partial Google data.');
+      }
     }
 
     const allRows = [...ocmRows, ...googleRows];
@@ -294,6 +330,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       upserted: allRows.length,
       from_ocm: ocmRows.length,
       from_google: googleRows.length,
+      google_requests_used: googleRequestCount,
     });
   } catch (e) {
     console.error('Sync error:', e);
