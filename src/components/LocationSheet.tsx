@@ -287,6 +287,24 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
             </div>
           )}
 
+          {/* Address - clickable to open in maps (above Open in Google) */}
+          <div 
+            className="flex items-start gap-3 mb-4 p-3 bg-neutral-800/50 rounded-xl"
+            role="button"
+            tabIndex={0}
+            onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.address || `${location.lat},${location.lng}`)}`, '_blank')}
+            onKeyDown={(e) => e.key === 'Enter' && (window as Window & { open: (u: string) => void }).open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.address || `${location.lat},${location.lng}`)}`, '_blank')}
+          >
+            <MapPin className="w-5 h-5 text-neutral-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-neutral-300 text-sm">{location.address || 'Address not listed'}</p>
+              {location.price && !priceLabel && (
+                <p className="text-green-500 font-semibold mt-1">{location.price}</p>
+              )}
+            </div>
+            <ExternalLink className="w-4 h-4 text-neutral-500 shrink-0 mt-0.5" />
+          </div>
+
           {/* Quick actions: full width row (Open in Google, Call) so visible on web without scrolling */}
           <div className={cn("w-full grid gap-2 mb-4", location.phone ? "grid-cols-2" : "grid-cols-1")}>
             <button
@@ -306,24 +324,6 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
                 Call
               </a>
             )}
-          </div>
-
-          {/* Address - clickable to open in maps */}
-          <div 
-            className="flex items-start gap-3 mb-4 p-3 bg-neutral-800/50 rounded-xl"
-            role="button"
-            tabIndex={0}
-            onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.address || `${location.lat},${location.lng}`)}`, '_blank')}
-            onKeyDown={(e) => e.key === 'Enter' && (window as Window & { open: (u: string) => void }).open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.address || `${location.lat},${location.lng}`)}`, '_blank')}
-          >
-            <MapPin className="w-5 h-5 text-neutral-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-neutral-300 text-sm">{location.address || 'Address not listed'}</p>
-              {location.price && !priceLabel && (
-                <p className="text-green-500 font-semibold mt-1">{location.price}</p>
-              )}
-            </div>
-            <ExternalLink className="w-4 h-4 text-neutral-500 shrink-0 mt-0.5" />
           </div>
 
           {/* Contact section */}
