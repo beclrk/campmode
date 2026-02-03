@@ -22,10 +22,24 @@ export async function fetchGooglePlacesInBounds(bounds: Bounds): Promise<Locatio
   });
   const base = typeof window !== 'undefined' ? '' : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '';
   const url = `${base}/api/places?${params}`;
-  const res = await fetch(url);
-  if (!res.ok) return [];
-  const data = (await res.json()) as { locations?: Location[] };
-  return Array.isArray(data.locations) ? data.locations : [];
+  try {
+    const res = await fetch(url);
+    const contentType = res.headers.get('content-type') ?? '';
+    if (!contentType.includes('application/json')) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[CampMode] /api/places returned non-JSON (likely SPA HTML). Check vercel.json rewrites so /api/* is not rewritten to index.html.');
+      }
+      return [];
+    }
+    if (!res.ok) return [];
+    const data = (await res.json()) as { locations?: Location[] };
+    return Array.isArray(data.locations) ? data.locations : [];
+  } catch (e) {
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn('[CampMode] /api/places fetch failed:', e);
+    }
+    return [];
+  }
 }
 
 /** Fetch all places in bounds (calls API which returns Google + OCM merged). */

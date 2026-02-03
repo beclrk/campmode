@@ -69,6 +69,13 @@ Environment variables are applied on the **next deployment**.
 - Confirm you **redeployed** after adding it.
 - In the browser: **Developer tools** (F12) → **Network** → filter by “places”. When you move the map you should see a request to `/api/places?swLat=...`. Open it and check the **Response**: it should contain a `locations` array (can be large). If the response is `{ locations: [] }`, the key may be missing or invalid on the server.
 
+### Check if API routes are hit at all
+
+1. After deploying, open **`https://your-app.vercel.app/api/health`** in a new tab.
+2. If you see **JSON** like `{ "ok": true, "hasPlacesKey": true }` → API routes work and the key is set; the issue may be with `/api/places` or the map logic.
+3. If you see **your app’s HTML** (the same as the homepage) → Vercel is still rewriting `/api/*` to the SPA. In that case, check `vercel.json`: there must be a rewrite for `/api/:path*` **before** the catch‑all to `index.html`, so `/api` requests are not rewritten.
+4. Open the **Console** (F12 → Console) on your app page. If you see a warning like “/api/places returned non-JSON (likely SPA HTML)”, the API request is getting HTML instead of JSON; fix the rewrites as above.
+
 ---
 
 ## Summary
