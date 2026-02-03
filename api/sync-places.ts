@@ -137,16 +137,23 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Fetch ALL UK EV chargers from OpenChargeMap. Single request, no limit (API may cap at ~10k). */
+/** Fetch UK EV chargers from OpenChargeMap using countrycode=GB (was boundingbox; OCM returns ~10k with countrycode). */
 async function fetchAllOcmUK(): Promise<SupabaseLocationRow[]> {
-  const { swLat, swLng, neLat, neLng } = SYNC_BOUNDS;
-  const bbox = `${swLat},${swLng},${neLat},${neLng}`;
-  const url = `${OCM_BASE}?output=json&boundingbox=${bbox}&maxresults=50000&compact=true&verbose=false`;
+  const url = `${OCM_BASE}?output=json&countrycode=GB&maxresults=10000&compact=true&verbose=false`;
   try {
     const resp = await fetch(url);
-    if (!resp.ok) return [];
-    const data = (await resp.json()) as OCMResult[];
-    if (!Array.isArray(data)) return [];
+    console.log('[sync-places] OCM API response status:', resp.status, resp.statusText);
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.error('[sync-places] OCM API error body:', text.slice(0, 500));
+      return [];
+    }
+    const data = (await resp.json()) as OCMResult[] | { error?: string; message?: string };
+    if (!Array.isArray(data)) {
+      console.error('[sync-places] OCM API did not return array:', typeof data, JSON.stringify(data).slice(0, 300));
+      return [];
+    }
+    console.log('[sync-places] OCM API returned', data.length, 'POIs');
     const now = new Date().toISOString();
     return data
       .map((r) => {
@@ -175,7 +182,7 @@ async function fetchAllOcmUK(): Promise<SupabaseLocationRow[]> {
       })
       .filter((loc) => loc.lat !== 0 || loc.lng !== 0);
   } catch (e) {
-    console.error('Open Charge Map fetch error:', e);
+    console.error('[sync-places] OpenChargeMap fetch error:', e instanceof Error ? e.message : e);
     return [];
   }
 }
