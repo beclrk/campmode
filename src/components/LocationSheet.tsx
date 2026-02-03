@@ -326,19 +326,6 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
             <ExternalLink className="w-4 h-4 text-neutral-500 shrink-0 mt-0.5" />
           </div>
 
-          {/* Description - hide when same as address to avoid showing location twice */}
-          {(() => {
-            const desc = (location.description ?? '').trim();
-            const addr = (location.address ?? '').trim();
-            const isSameAsAddress = addr && desc && (desc === addr || desc.includes(addr) || addr.includes(desc));
-            if (!desc || isSameAsAddress) return null;
-            return (
-              <p className="text-neutral-400 text-sm leading-relaxed mb-5">
-                {desc}
-              </p>
-            );
-          })()}
-
           {/* Contact section */}
           {(location.phone || location.website) && (
             <div className="mb-5">
