@@ -138,12 +138,16 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Fetch UK EV chargers from OpenChargeMap using countrycode=GB (was boundingbox; OCM returns ~10k with countrycode). */
+/** Fetch UK EV chargers from OpenChargeMap. Uses boundingbox for UK; API key required for v3 (set OPENCHARGEMAP_API_KEY). */
 async function fetchAllOcmUK(): Promise<SupabaseLocationRow[]> {
-  const url = `${OCM_BASE}?output=json&countrycode=GB&maxresults=10000&compact=true&verbose=false`;
+  const { swLat, swLng, neLat, neLng } = SYNC_BOUNDS;
+  const bbox = `${swLat},${swLng},${neLat},${neLng}`;
+  const key = process.env.OPENCHARGEMAP_API_KEY;
+  const base = `${OCM_BASE}?output=json&boundingbox=${bbox}&maxresults=10000&compact=true&verbose=false`;
+  const url = key ? `${base}&key=${encodeURIComponent(key)}` : base;
   try {
     const resp = await fetch(url);
-    console.log('[sync-places] OCM API response status:', resp.status, resp.statusText);
+    console.log('[sync-places] OCM API response status:', resp.status, resp.statusText, 'url (no key):', base.slice(0, 80) + '...');
     if (!resp.ok) {
       const text = await resp.text();
       console.error('[sync-places] OCM API error body:', text.slice(0, 500));
@@ -153,6 +157,9 @@ async function fetchAllOcmUK(): Promise<SupabaseLocationRow[]> {
     if (!Array.isArray(data)) {
       console.error('[sync-places] OCM API did not return array:', typeof data, JSON.stringify(data).slice(0, 300));
       return [];
+    }
+    if (data.length === 0 && !key) {
+      console.warn('[sync-places] OCM returned 0 POIs; API may require a key. Set OPENCHARGEMAP_API_KEY in Vercel (see openchargemap.org).');
     }
     console.log('[sync-places] OCM API returned', data.length, 'POIs');
     const now = new Date().toISOString();
