@@ -1,6 +1,6 @@
 import { Tent, Zap, Coffee, Crown } from 'lucide-react';
 import { Location } from '@/types';
-import { getLocationTypeColor, getLocationTypeLabel, qualityScore, formatDistanceMiles, cn } from '@/lib/utils';
+import { getLocationTypeColor, getLocationTypeLabel, formatDistanceMiles, cn } from '@/lib/utils';
 import { calculateDistance } from '@/lib/utils';
 
 const TYPE_ICONS = { campsite: Tent, rest_stop: Coffee, ev_charger: Zap };

@@ -14,7 +14,7 @@ import { sampleLocations } from '@/data/locations';
 import { type Bounds, DEFAULT_UK_BOUNDS } from '@/services/placesApi';
 import { Location, LocationType, Review } from '@/types';
 import { cn, qualityScore, getTop10PercentIds, normalizeLocationType } from '@/lib/utils';
-import { Route, Map, List } from 'lucide-react';
+import { Route, Map as MapIcon, List } from 'lucide-react';
 
 // Sample reviews - in production these come from Supabase
 const sampleReviews: Review[] = [
@@ -330,7 +330,7 @@ export default function HomePage() {
                   : 'bg-neutral-800/80 text-neutral-400 hover:text-white hover:bg-neutral-700'
               )}
             >
-              <Map className="w-4 h-4" />
+              <MapIcon className="w-4 h-4" />
               Map
             </button>
             <button
