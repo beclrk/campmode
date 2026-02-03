@@ -4,9 +4,9 @@
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "crons": [
-    {
-      "path": "/api/sync-places",
-      "schedule": "0 4 * * *"
-    }
+    { "path": "/api/sync-places?type=ev_only", "schedule": "0 4 * * *" },
+    { "path": "/api/sync-places?type=campsites", "schedule": "10 4 * * 0" },
+    { "path": "/api/sync-places?type=rest_stops", "schedule": "20 4 * * 0" },
+    { "path": "/api/sync-places?type=enrich_photos", "schedule": "30 4 * * 0" }
   ]
 }
