@@ -119,7 +119,7 @@ export default function RoutePlannerPanel({
         )}
 
         {/* Stops list - scrollable */}
-        <div className="flex-1 min-h-0 overflow-y-auto sheet-scroll hide-scrollbar px-4 py-3 pb-28">
+        <div className="flex-1 min-h-0 overflow-y-auto sheet-scroll hide-scrollbar px-4 py-3 location-sheet-scroll-bottom">
           <ul className="space-y-2">
             {stops.map((stop, index) => (
               <li

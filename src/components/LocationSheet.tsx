@@ -219,7 +219,7 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
         </button>
 
         {/* Content - flex-1 min-h-0 gives definite height so swipe-to-scroll works on mobile */}
-        <div className="flex-1 min-h-0 px-5 pb-28 hide-scrollbar sheet-scroll">
+        <div className="flex-1 min-h-0 px-5 location-sheet-scroll-bottom hide-scrollbar sheet-scroll">
           {/* Header: icon, type badge, name, rating, distance, price */}
           <div className="flex items-start gap-4 mb-4">
             <div 

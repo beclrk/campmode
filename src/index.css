@@ -89,6 +89,19 @@ body {
   padding-top: max(env(safe-area-inset-top, 0px), 1.5rem);
 }
 
+/* Reserve space for app promo banner so scroll content isn't covered (location sheet + settings) */
+:root {
+  --app-promo-banner-height: 72px;
+}
+
+.location-sheet-scroll-bottom {
+  padding-bottom: calc(7rem + var(--app-promo-banner-height) + env(safe-area-inset-bottom, 0px));
+}
+
+.settings-scroll-bottom {
+  padding-bottom: calc(3rem + var(--app-promo-banner-height) + env(safe-area-inset-bottom, 0px));
+}
+
 /* Location sheet: sit above browser bottom bar (Chrome back/new tab etc.) */
 .location-sheet-wrapper {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 56px);

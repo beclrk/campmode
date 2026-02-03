@@ -180,7 +180,7 @@ export default function SettingsPage() {
       {/* Wrapper gives scroll area a definite height; main fills it and scrolls */}
       <div className="relative z-10 flex-1 min-h-0 flex flex-col overflow-hidden">
         <main
-          className="settings-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 pb-12"
+          className="settings-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 settings-scroll-bottom"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
         {/* Map & display */}
