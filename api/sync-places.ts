@@ -25,7 +25,6 @@ const GOOGLE_PAGE_DELAY_MS = 1500;
 /** COST CONTROL: Without these caps, one full UK sync can make 1500–3000+ Google requests (~£50–100+ per run). */
 const MAX_GRID_CELLS = 24;
 const MAX_PAGES_PER_CELL_TYPE = 2;
-const MAX_GOOGLE_REQUESTS_PER_SYNC = 400;
 /** Per-type run (campsites / rest_stops) cap so we finish within 60s. */
 const MAX_GOOGLE_REQUESTS_PER_TYPE = 40;
 /** Max Place Details calls per enrich_photos run to stay under 60s (~200 * 0.3s). */
