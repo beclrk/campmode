@@ -1,9 +1,37 @@
+import { createClient } from '@supabase/supabase-js';
+
 type VercelRequest = { method?: string; query?: Record<string, string | string[] | undefined> };
 type VercelResponse = {
   setHeader: (name: string, value: string) => void;
   status: (code: number) => VercelResponse;
   json: (body: unknown) => void;
 };
+
+/** UK only: bounds for Great Britain + Northern Ireland. */
+const UK_BOUNDS = { swLat: 49.8, swLng: -8.6, neLat: 60.9, neLng: 1.8 };
+
+function clampBoundsToUK(
+  swLat: number,
+  swLng: number,
+  neLat: number,
+  neLng: number
+): [number, number, number, number] {
+  return [
+    Math.max(swLat, UK_BOUNDS.swLat),
+    Math.max(swLng, UK_BOUNDS.swLng),
+    Math.min(neLat, UK_BOUNDS.neLat),
+    Math.min(neLng, UK_BOUNDS.neLng),
+  ];
+}
+
+function inUK(lat: number, lng: number): boolean {
+  return (
+    lat >= UK_BOUNDS.swLat &&
+    lat <= UK_BOUNDS.neLat &&
+    lng >= UK_BOUNDS.swLng &&
+    lng <= UK_BOUNDS.neLng
+  );
+}
 
 const GOOGLE_PLACES_BASE = 'https://maps.googleapis.com/maps/api/place/textsearch/json';
 const OCM_BASE = 'https://api.openchargemap.io/v3/poi/';
@@ -191,17 +219,82 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Invalid bounds: swLat, swLng, neLat, neLng required' });
   }
 
+  const [cSwLat, cSwLng, cNeLat, cNeLng] = clampBoundsToUK(swLat, swLng, neLat, neLng);
   const byId = new Map<string, LocationItem>();
 
-  // Always load from live APIs for the current viewport so the map shows full, up-to-date data.
-  // Supabase sync (cron) populates the DB for other use; the map uses Google + OCM here.
-  const ocmLocations = await fetchOcmInBounds(swLat, swLng, neLat, neLng);
-  for (const loc of ocmLocations) byId.set(loc.id, loc);
+  // 1) Primary: load from Supabase (UK data synced by cron). If we have data, use it.
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (supabaseUrl && supabaseServiceKey) {
+    try {
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      const { data: rows } = await supabase
+        .from('locations')
+        .select('id, name, type, lat, lng, description, address, price, facilities, images, website, phone, google_place_id, external_id, external_source, created_at, updated_at')
+        .gte('lat', cSwLat)
+        .lte('lat', cNeLat)
+        .gte('lng', cSwLng)
+        .lte('lng', cNeLng);
+      if (rows && rows.length > 0) {
+        const now = new Date().toISOString();
+        for (const r of rows as Array<{
+          id: string;
+          name: string;
+          type: string;
+          lat: number;
+          lng: number;
+          description: string;
+          address: string;
+          facilities: string[];
+          images: string[];
+          website?: string | null;
+          phone?: string | null;
+          google_place_id?: string | null;
+          external_id: string;
+          external_source: string;
+          created_at: string;
+          updated_at: string;
+        }>) {
+          if (!inUK(r.lat, r.lng)) continue;
+          const id = r.id || `${r.external_source}-${r.external_id}`;
+          byId.set(id, {
+            id,
+            name: r.name ?? '',
+            type: r.type === 'ev_charger' ? 'ev_charger' : r.type === 'rest_stop' ? 'rest_stop' : 'campsite',
+            lat: r.lat,
+            lng: r.lng,
+            description: r.description ?? '',
+            address: r.address ?? '',
+            facilities: Array.isArray(r.facilities) ? r.facilities : [],
+            images: Array.isArray(r.images) ? r.images : [],
+            google_place_id: r.google_place_id ?? undefined,
+            ocm_id: r.external_source === 'open_charge_map' ? parseInt(String(r.external_id), 10) : undefined,
+            website: r.website ?? undefined,
+            phone: r.phone ?? undefined,
+            created_at: r.created_at ?? now,
+            updated_at: r.updated_at ?? now,
+          });
+        }
+        const fromDb = Array.from(byId.values());
+        fromDb.sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+        return res.status(200).json({ locations: fromDb });
+      }
+    } catch (e) {
+      console.error('Supabase places fetch error:', e);
+    }
+  }
 
-  // Cover the full visible bounds with a grid of Google requests (max radius 50km per request)
+  // 2) Fallback: live APIs (Google + OCM) for current viewport. UK only.
+  const ocmLocations = await fetchOcmInBounds(cSwLat, cSwLng, cNeLat, cNeLng);
+  for (const loc of ocmLocations) {
+    if (inUK(loc.lat, loc.lng)) byId.set(loc.id, loc);
+  }
+
   const key = process.env.GOOGLE_PLACES_API_KEY;
   if (key) {
-    const gridCenters = getGridCenters(swLat, swLng, neLat, neLng);
+    const gridCenters = getGridCenters(cSwLat, cSwLng, cNeLat, cNeLng);
     for (const type of PLACE_TYPES) {
       for (const { lat: centerLat, lng: centerLng } of gridCenters) {
         const url = new URL(GOOGLE_PLACES_BASE);
@@ -210,18 +303,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         url.searchParams.set('radius', String(GOOGLE_MAX_RADIUS_M));
         url.searchParams.set('type', type);
         url.searchParams.set('key', key);
-
         try {
           const resp = await fetch(url.toString());
-          const data = (await resp.json()) as {
-            status: string;
-            results?: GooglePlaceResult[];
-            error_message?: string;
-          };
+          const data = (await resp.json()) as { status: string; results?: GooglePlaceResult[] };
           if (data.status === 'OK' && Array.isArray(data.results)) {
             for (const r of data.results) {
               const loc = normalizePlace(r, type);
-              if (loc) byId.set(loc.id, loc);
+              if (loc && inUK(loc.lat, loc.lng)) byId.set(loc.id, loc);
             }
           }
         } catch (e) {

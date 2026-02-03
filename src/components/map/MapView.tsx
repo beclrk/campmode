@@ -1,5 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster';
+import 'react-leaflet-cluster/dist/assets/MarkerCluster.css';
+import 'react-leaflet-cluster/dist/assets/MarkerCluster.Default.css';
 import L from 'leaflet';
 import { Location } from '@/types';
 import { getLocationTypeColor } from '@/lib/utils';
@@ -177,17 +180,19 @@ export default function MapView({
         />
       )}
 
-      {/* Location markers */}
-      {locations.map((location) => (
-        <Marker
-          key={location.id}
-          position={[location.lat, location.lng]}
-          icon={createMarkerIcon(location.type, selectedLocation?.id === location.id)}
-          eventHandlers={{
-            click: () => onLocationSelect(location),
-          }}
-        />
-      ))}
+      {/* Location markers (clustered so all locations visible at any zoom) */}
+      <MarkerClusterGroup>
+        {locations.map((location) => (
+          <Marker
+            key={location.id}
+            position={[location.lat, location.lng]}
+            icon={createMarkerIcon(location.type, selectedLocation?.id === location.id)}
+            eventHandlers={{
+              click: () => onLocationSelect(location),
+            }}
+          />
+        ))}
+      </MarkerClusterGroup>
 
       {/* User location marker */}
       {userLocation && (

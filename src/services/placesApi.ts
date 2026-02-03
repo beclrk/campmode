@@ -11,7 +11,10 @@ export const DEFAULT_UK_BOUNDS: Bounds = {
   ne: [60.9, 1.8],
 };
 
-/** Fetch all places in bounds from our API (Google Places + Open Charge Map, merged server-side so CORS is not an issue). */
+/** Last successful response – used when API fails so the map keeps showing data. */
+let lastGoodLocations: Location[] = [];
+
+/** Fetch all places in bounds from our API. On failure, returns last known good data so the map stays usable. */
 export async function fetchGooglePlacesInBounds(bounds: Bounds): Promise<Location[]> {
   const { sw, ne } = bounds;
   const params = new URLSearchParams({
@@ -27,11 +30,13 @@ export async function fetchGooglePlacesInBounds(bounds: Bounds): Promise<Locatio
     const contentType = res.headers.get('content-type') ?? '';
     if (!contentType.includes('application/json')) {
       if (typeof console !== 'undefined' && console.warn) {
-        console.warn('[CampMode] /api/places returned non-JSON (likely SPA HTML). Check vercel.json rewrites so /api/* is not rewritten to index.html.');
+        console.warn('[CampMode] /api/places returned non-JSON. Using last known good data.');
       }
-      return [];
+      return lastGoodLocations;
     }
-    if (!res.ok) return [];
+    if (!res.ok) {
+      return lastGoodLocations;
+    }
     const data = (await res.json()) as { locations?: Location[] } | Location[];
     const raw = Array.isArray(data) ? data : (Array.isArray(data.locations) ? data.locations : []);
     const locations = raw.filter(
@@ -43,6 +48,7 @@ export async function fetchGooglePlacesInBounds(bounds: Bounds): Promise<Locatio
         !Number.isNaN(loc.lat) &&
         !Number.isNaN(loc.lng)
     );
+    if (locations.length > 0) lastGoodLocations = locations;
     if (import.meta.env?.DEV) {
       console.log('[CampMode] /api/places:', raw.length, 'raw,', locations.length, 'valid');
     } else if (raw.length > 0 && locations.length === 0) {
@@ -51,9 +57,9 @@ export async function fetchGooglePlacesInBounds(bounds: Bounds): Promise<Locatio
     return locations;
   } catch (e) {
     if (typeof console !== 'undefined' && console.warn) {
-      console.warn('[CampMode] /api/places fetch failed:', e);
+      console.warn('[CampMode] /api/places fetch failed, using last known good:', e);
     }
-    return [];
+    return lastGoodLocations;
   }
 }
 

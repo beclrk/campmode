@@ -98,16 +98,9 @@ export default function HomePage() {
   // Prefer real-world data whenever we have any from the API; otherwise sample data
   const baseLocations = apiLocations.length > 0 ? apiLocations : sampleLocations;
 
-  // When zoomed out, show top N by popularity (API already sorts by rating × review count)
-  const MAX_MARKERS_WHEN_ZOOMED_OUT = 600;
-  const locationsToShow = useMemo(() => {
-    if (zoom <= 8) return baseLocations.slice(0, MAX_MARKERS_WHEN_ZOOMED_OUT);
-    return baseLocations;
-  }, [baseLocations, zoom]);
-
-  // Filter locations
+  // Show all locations at any zoom (clustering in MapView handles performance)
   const filteredLocations = useMemo(() => {
-    let result = locationsToShow;
+    let result = baseLocations;
 
     // Filter by type
     if (filter !== 'all') {
@@ -126,7 +119,7 @@ export default function HomePage() {
     }
 
     return result;
-  }, [locationsToShow, filter, searchQuery]);
+  }, [baseLocations, filter, searchQuery]);
 
   // Count by type (from full base so pills show total available)
   const counts = useMemo(() => ({
