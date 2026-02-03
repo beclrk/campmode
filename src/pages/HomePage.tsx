@@ -221,28 +221,26 @@ export default function HomePage() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      {/* Map - default view */}
-      {viewMode === 'map' && (
-        <div className="absolute inset-0">
-          <MapView
-            locations={filteredLocations}
-            selectedLocation={selectedLocation}
-            onLocationSelect={setSelectedLocation}
-            center={mapCenter}
-            userLocation={userLocation}
-            routePositions={routePositions}
-            onBoundsChange={setBounds}
-            basemap={basemap}
-            onBasemapChange={setBasemap}
-            osApiKey={import.meta.env.VITE_OS_API_KEY}
-            top10PercentIds={top10PercentIds}
-          />
-        </div>
-      )}
+      {/* Map - always mounted so zoom/position persist when switching back from list view */}
+      <div className={cn('absolute inset-0', viewMode === 'list' && 'hidden')}>
+        <MapView
+          locations={filteredLocations}
+          selectedLocation={selectedLocation}
+          onLocationSelect={setSelectedLocation}
+          center={mapCenter}
+          userLocation={userLocation}
+          routePositions={routePositions}
+          onBoundsChange={setBounds}
+          basemap={basemap}
+          onBasemapChange={setBasemap}
+          osApiKey={import.meta.env.VITE_OS_API_KEY}
+          top10PercentIds={top10PercentIds}
+        />
+      </div>
 
       {/* List view - sorted by quality */}
       {viewMode === 'list' && (
-        <div className="absolute inset-0 pt-[180px] md:pt-[160px] flex flex-col min-h-0">
+        <div className="absolute inset-0 pt-[220px] md:pt-[200px] flex flex-col min-h-0">
           <LocationListView
             locations={locationsSortedByQuality}
             top10PercentIds={top10PercentIds}
