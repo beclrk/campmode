@@ -89,16 +89,22 @@ body {
   padding-top: max(env(safe-area-inset-top, 0px), 1.5rem);
 }
 
-/* Reserve space for app promo banner so scroll content isn't covered (location sheet + settings) */
+/* Reserve space for app promo banner only when it's visible (avoids black gap when dismissed on web) */
 :root {
   --app-promo-banner-height: 72px;
 }
 
 .location-sheet-scroll-bottom {
+  padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
+}
+body.promo-banner-visible .location-sheet-scroll-bottom {
   padding-bottom: calc(7rem + var(--app-promo-banner-height) + env(safe-area-inset-bottom, 0px));
 }
 
 .settings-scroll-bottom {
+  padding-bottom: calc(3rem + env(safe-area-inset-bottom, 0px));
+}
+body.promo-banner-visible .settings-scroll-bottom {
   padding-bottom: calc(3rem + var(--app-promo-banner-height) + env(safe-area-inset-bottom, 0px));
 }
 

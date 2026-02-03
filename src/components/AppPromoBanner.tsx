@@ -27,6 +27,16 @@ export default function AppPromoBanner() {
     }
   }, []);
 
+  // So scroll areas only add reserve padding when banner is actually visible (avoids black gap when dismissed)
+  useEffect(() => {
+    if (visible) {
+      document.body.classList.add('promo-banner-visible');
+    } else {
+      document.body.classList.remove('promo-banner-visible');
+    }
+    return () => document.body.classList.remove('promo-banner-visible');
+  }, [visible]);
+
   const dismiss = () => {
     try {
       sessionStorage.setItem(STORAGE_KEY, '1');
