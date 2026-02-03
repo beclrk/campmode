@@ -39,23 +39,26 @@ const CLUSTER_RADIUS = 60;
 const CLUSTER_MAX_ZOOM = 16;
 const CLUSTER_MIN_ZOOM = 2;
 
-// Gold star badge (top 10% by quality) — top-left
+// Gold star badge (top 10% by quality) — match list view: bg-amber-400/90, text-amber-900, 16px, -4px offset
 const STAR_BADGE_HTML = (iconSize: number) =>
-  `<span style="position:absolute;top:-6px;left:-6px;width:${iconSize}px;height:${iconSize}px;border-radius:50%;background:linear-gradient(135deg,#fbbf24,#f59e0b);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.4);border:2px solid #fef3c7;"><svg width="${iconSize - 4}" height="${iconSize - 4}" viewBox="0 0 24 24" fill="#fff" stroke="#f59e0b" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>`;
-// Gold crown badge (5+ photos) — top-right; same shape as Lucide Crown (list view)
+  `<span style="position:absolute;top:-4px;left:-4px;width:${iconSize}px;height:${iconSize}px;border-radius:50%;background:rgba(251,191,36,0.9);display:flex;align-items:center;justify-content:center;"><svg width="${iconSize - 4}" height="${iconSize - 4}" viewBox="0 0 24 24" fill="#78350f" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>`;
+// Gold crown badge (5+ photos) — match list view: bg-amber-400/90, text-amber-900, 16px, -4px offset
 const CROWN_BADGE_HTML = (iconSize: number) =>
-  `<span style="position:absolute;top:-6px;right:-6px;width:${iconSize}px;height:${iconSize}px;border-radius:50%;background:linear-gradient(135deg,#fbbf24,#f59e0b);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.4);border:2px solid #fef3c7;"><svg width="${iconSize - 4}" height="${iconSize - 4}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 17l2-7 4 3 4-4 4 4 2 7"/><path d="M4 17h16"/><path d="M12 2l2 4 4 2-2 4 2 4-6-2-6 2 2-4-2-4 4-2 2-4z"/></svg></span>`;
+  `<span style="position:absolute;top:-4px;right:-4px;width:${iconSize}px;height:${iconSize}px;border-radius:50%;background:rgba(251,191,36,0.9);display:flex;align-items:center;justify-content:center;"><svg width="${iconSize - 4}" height="${iconSize - 4}" viewBox="0 0 24 24" fill="none" stroke="#78350f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 17l2-7 4 3 4-4 4 4 2 7"/><path d="M4 17h16"/><path d="M12 2l2 4 4 2-2 4 2 4-6-2-6 2 2-4-2-4 4-2 2-4z"/></svg></span>`;
+
+const BADGE_SIZE = 16;
 
 function createMarkerIcon(type: string, isSelected: boolean, isTop10: boolean, isCrown: boolean) {
   const color = getLocationTypeColor(type);
   const size = isSelected ? 44 : 36;
   const innerSize = isSelected ? 20 : 16;
-  const starBadge = isTop10 ? STAR_BADGE_HTML(18) : '';
-  const crownBadge = isCrown ? CROWN_BADGE_HTML(18) : '';
+  const starBadge = isTop10 ? STAR_BADGE_HTML(BADGE_SIZE) : '';
+  const crownBadge = isCrown ? CROWN_BADGE_HTML(BADGE_SIZE) : '';
+  const totalSize = size + 12;
   return L.divIcon({
     className: 'custom-marker',
     html: `
-      <div style="position:relative;display:inline-block;">
+      <div style="position:relative;width:${totalSize}px;height:${totalSize}px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">
         <div style="
           width: ${size}px; height: ${size}px;
           background: ${isSelected ? color : 'rgba(10,10,10,0.9)'};
@@ -70,8 +73,8 @@ function createMarkerIcon(type: string, isSelected: boolean, isTop10: boolean, i
         ${crownBadge}
       </div>
     `,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
+    iconSize: [totalSize, totalSize],
+    iconAnchor: [totalSize / 2, totalSize / 2],
   });
 }
 
