@@ -35,10 +35,10 @@ export default function FilterPills({ selectedTypes, onToggleType, counts }: Fil
               "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
               isSelected
                 ? color === 'green'
-                  ? 'bg-green-500 text-white'
+                  ? "bg-green-500/55 backdrop-blur-sm border border-green-400/25 text-white"
                   : color === 'blue'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-amber-500 text-white'
+                  ? "bg-blue-500/55 backdrop-blur-sm border border-blue-400/25 text-white"
+                  : "bg-amber-500/55 backdrop-blur-sm border border-amber-400/25 text-white"
                 : 'bg-neutral-800/80 text-neutral-300 hover:bg-neutral-700'
             )}
           >
@@ -46,7 +46,7 @@ export default function FilterPills({ selectedTypes, onToggleType, counts }: Fil
             <span>{label}</span>
             <span className={cn(
               "text-xs px-1.5 py-0.5 rounded-full",
-              isSelected ? 'bg-white/20' : 'bg-neutral-700'
+              isSelected ? 'bg-white/15' : 'bg-neutral-700'
             )}>
               {count}
             </span>
