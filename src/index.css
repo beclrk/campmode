@@ -84,6 +84,11 @@ body {
   }
 }
 
+/* Minimum top padding so headers aren't flush with screen edge (desktop + mobile) */
+.safe-top-with-min {
+  padding-top: max(env(safe-area-inset-top, 0px), 1.5rem);
+}
+
 /* Location sheet: sit above browser bottom bar (Chrome back/new tab etc.) */
 .location-sheet-wrapper {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 56px);

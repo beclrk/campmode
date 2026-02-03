@@ -165,7 +165,7 @@ export default function SettingsPage() {
       <div className="absolute inset-0 bg-gradient-to-br from-green-900/10 via-neutral-950 to-neutral-950 pointer-events-none" />
 
       {/* Header - fixed height */}
-      <header className="relative z-10 flex-shrink-0 flex items-center gap-4 px-4 py-4 border-b border-neutral-800 safe-top">
+      <header className="relative z-10 flex-shrink-0 flex items-center gap-4 px-4 pb-4 border-b border-neutral-800 safe-top-with-min">
         <button
           type="button"
           onClick={() => navigate('/')}
