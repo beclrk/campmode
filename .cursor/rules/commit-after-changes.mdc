@@ -9,7 +9,7 @@ alwaysApply: true
 
 1. After editing files: `git add` the changed files (or `git add .` when appropriate).
 2. `git commit -m "Short clear message"` describing what changed.
-3. **Immediately** `git push origin main` so changes are on GitHub and Vercel.
-4. For push, **always use `required_permissions: ["all"]`** so credentials work (otherwise push fails and changes stay local).
+3. **Immediately** run `git push origin main` so changes are on GitHub and Vercel redeploys.
+4. **Critical**: When running `git push`, always pass **`required_permissions: ["all"]`** in the tool call. Without this, GitHub auth fails in the environment and the push does not happen.
 
 Skip only if the user explicitly said not to commit/push or to only make changes without committing.
