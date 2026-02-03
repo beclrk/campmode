@@ -1,5 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
-
 type VercelRequest = { method?: string; query?: Record<string, string | string[] | undefined> };
 type VercelResponse = {
   setHeader: (name: string, value: string) => void;
@@ -195,72 +193,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const byId = new Map<string, LocationItem>();
 
-  // Prefer Supabase when sync has populated locations (same project, London eu-west-2)
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (supabaseUrl && supabaseServiceKey) {
-    try {
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
-      const { data: rows } = await supabase
-        .from('locations')
-        .select('id, name, type, lat, lng, description, address, price, facilities, images, website, phone, google_place_id, external_id, external_source, created_at, updated_at')
-        .gte('lat', Math.min(swLat, neLat))
-        .lte('lat', Math.max(swLat, neLat))
-        .gte('lng', Math.min(swLng, neLng))
-        .lte('lng', Math.max(swLng, neLng));
-      if (rows && rows.length > 0) {
-        const now = new Date().toISOString();
-        for (const r of rows as Array<{
-          id: string;
-          name: string;
-          type: string;
-          lat: number;
-          lng: number;
-          description: string;
-          address: string;
-          price?: string | null;
-          facilities: string[];
-          images: string[];
-          website?: string | null;
-          phone?: string | null;
-          google_place_id?: string | null;
-          external_id: string;
-          external_source: string;
-          created_at: string;
-          updated_at: string;
-        }>) {
-          const id = r.id || `${r.external_source}-${r.external_id}`;
-          const loc: LocationItem = {
-            id,
-            name: r.name ?? '',
-            type: r.type === 'ev_charger' ? 'ev_charger' : r.type === 'rest_stop' ? 'rest_stop' : 'campsite',
-            lat: r.lat,
-            lng: r.lng,
-            description: r.description ?? '',
-            address: r.address ?? '',
-            facilities: Array.isArray(r.facilities) ? r.facilities : [],
-            images: Array.isArray(r.images) ? r.images : [],
-            google_place_id: r.google_place_id ?? undefined,
-            ocm_id: r.external_source === 'open_charge_map' ? parseInt(String(r.external_id), 10) : undefined,
-            website: r.website ?? undefined,
-            phone: r.phone ?? undefined,
-            created_at: r.created_at ?? now,
-            updated_at: r.updated_at ?? now,
-          };
-          byId.set(id, loc);
-        }
-        const fromDb = Array.from(byId.values());
-        fromDb.sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
-        return res.status(200).json({ locations: fromDb });
-      }
-    } catch (e) {
-      console.error('Supabase places fetch error:', e);
-    }
-  }
-
-  // Fallback: fetch from Open Charge Map and Google Places
+  // Always load from live APIs for the current viewport so the map shows full, up-to-date data.
+  // Supabase sync (cron) populates the DB for other use; the map uses Google + OCM here.
   const ocmLocations = await fetchOcmInBounds(swLat, swLng, neLat, neLng);
   for (const loc of ocmLocations) byId.set(loc.id, loc);
 
