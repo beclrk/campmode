@@ -10,6 +10,19 @@ import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import TermsPage from '@/pages/TermsPage';
 import { Loader2 } from 'lucide-react';
 
+/** If the URL has a password-recovery hash but we're not on /reset-password, redirect there so the user can set a new password instead of landing logged in. */
+function RecoveryRedirect({ children }: { children: React.ReactNode }) {
+  if (typeof window !== 'undefined') {
+    const hash = window.location.hash;
+    const pathname = window.location.pathname;
+    if (hash && hash.includes('type=recovery') && pathname !== '/reset-password') {
+      window.location.replace('/reset-password' + hash);
+      return null;
+    }
+  }
+  return <>{children}</>;
+}
+
 /** Protects app routes: redirects to /login if not signed in. Public: /login, /privacy, /terms. */
 function ProtectedRoute() {
   const { user, loading } = useAuth();
@@ -55,9 +68,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
-        {/* Only "open in app" prompt on the site — shows on web only, not in native iOS/Android app */}
-        <AppPromoBanner />
+        <RecoveryRedirect>
+          <AppRoutes />
+          {/* Only "open in app" prompt on the site — shows on web only, not in native iOS/Android app */}
+          <AppPromoBanner />
+        </RecoveryRedirect>
       </AuthProvider>
     </BrowserRouter>
   );
