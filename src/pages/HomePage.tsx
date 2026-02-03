@@ -42,7 +42,18 @@ const sampleReviews: Review[] = [
 export default function HomePage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<LocationType | 'all'>('all');
+  // All three types selected by default; clicking a pill deselects that type (hides from map)
+  const [selectedTypes, setSelectedTypes] = useState<Set<LocationType>>(
+    () => new Set<LocationType>(['campsite', 'rest_stop', 'ev_charger'])
+  );
+  const toggleType = useCallback((type: LocationType) => {
+    setSelectedTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number] | undefined>();
@@ -101,22 +112,20 @@ export default function HomePage() {
   // Prefer real-world data whenever we have any from the API; otherwise sample data
   const baseLocations = apiLocations.length > 0 ? apiLocations : sampleLocations;
 
-  /** When showing "All", cap EV chargers so campsites and rest stops aren't overwhelmed. */
-  const MAX_EV_CHARGERS_WHEN_SHOWING_ALL = 300;
+  /** When all three types are selected, cap EV chargers so campsites and rest stops aren't overwhelmed. */
+  const MAX_EV_CHARGERS_WHEN_ALL_SELECTED = 300;
 
-  // Show all locations at any zoom (clustering in MapView handles performance)
+  // Show locations whose type is in selectedTypes (clustering in MapView handles performance)
   const filteredLocations = useMemo(() => {
-    let result = baseLocations;
+    // Filter by selected types (use normalized type so campsite/campground both match)
+    let result = baseLocations.filter((loc) => selectedTypes.has(normalizeType(loc.type ?? '')));
 
-    // Filter by type (use normalized type so campsite/campground both match)
-    if (filter !== 'all') {
-      result = result.filter((loc) => normalizeType(loc.type ?? '') === filter);
-    } else {
-      // "All" view: prioritise campsites and rest stops; cap EV chargers so they don't overwhelm
+    // When all three types selected: prioritise campsites and rest stops; cap EV chargers
+    if (selectedTypes.size === 3) {
       const campsites = result.filter((l) => normalizeType(l.type ?? '') === 'campsite');
       const restStops = result.filter((l) => normalizeType(l.type ?? '') === 'rest_stop');
       const evChargers = result.filter((l) => normalizeType(l.type ?? '') === 'ev_charger');
-      const evCapped = evChargers.slice(0, MAX_EV_CHARGERS_WHEN_SHOWING_ALL);
+      const evCapped = evChargers.slice(0, MAX_EV_CHARGERS_WHEN_ALL_SELECTED);
       result = [...campsites, ...restStops, ...evCapped];
     }
 
@@ -132,17 +141,16 @@ export default function HomePage() {
     }
 
     // When a category has no results from API, show sample locations of that type so the map isn't empty
-    if (filter !== 'all' && result.length === 0 && baseLocations.length > 0) {
-      const sampleOfType = sampleLocations.filter((l) => normalizeType(l.type ?? '') === filter);
+    if (result.length === 0 && baseLocations.length > 0) {
+      const sampleOfType = sampleLocations.filter((l) => selectedTypes.has(normalizeType(l.type ?? '')));
       result = sampleOfType;
     }
 
     return result;
-  }, [baseLocations, filter, searchQuery]);
+  }, [baseLocations, selectedTypes, searchQuery]);
 
   // Count by type (from full base so pills show total available; use normalized type)
   const counts = useMemo(() => ({
-    all: baseLocations.length,
     campsite: baseLocations.filter((l) => normalizeType(l.type ?? '') === 'campsite').length,
     ev_charger: baseLocations.filter((l) => normalizeType(l.type ?? '') === 'ev_charger').length,
     rest_stop: baseLocations.filter((l) => normalizeType(l.type ?? '') === 'rest_stop').length,
@@ -218,10 +226,10 @@ export default function HomePage() {
             <UserMenu />
           </div>
 
-          {/* Filter pills */}
+          {/* Filter pills: Campsites, Rest Stops, EV Chargers — all selected by default; click to deselect (hide from map) */}
           <FilterPills
-            activeFilter={filter}
-            onFilterChange={setFilter}
+            selectedTypes={selectedTypes}
+            onToggleType={toggleType}
             counts={counts}
           />
         </div>
