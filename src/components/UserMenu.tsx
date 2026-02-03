@@ -32,9 +32,9 @@ export default function UserMenu() {
         {user ? userInitial : <LogIn className="w-5 h-5" />}
       </button>
 
-      {/* Dropdown menu */}
+      {/* Dropdown menu - z-[1100] so it appears above FilterPills (categories) on mobile */}
       {isOpen && (
-        <div className="absolute top-full right-0 mt-2 w-56 bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-full right-0 mt-2 z-[1100] w-56 bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
           {user ? (
             <>
               {/* User info */}
