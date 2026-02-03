@@ -486,8 +486,8 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
             </div>
           )}
 
-          {/* Action buttons: Website, Call, Navigate, Open in Google - full width on web */}
-          <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          {/* Action buttons: Website, Call, Navigate (full width) */}
+          <div className="w-full grid grid-cols-2 gap-3 mb-6">
             {location.website && typeof location.website === 'string' && (
               <button
                 onClick={handleWebsite}
@@ -508,17 +508,10 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
             )}
             <button
               onClick={handleNavigate}
-              className="flex flex-col items-center justify-center gap-1.5 p-4 bg-white rounded-xl hover:bg-neutral-100 transition-colors"
+              className="col-span-2 flex flex-col items-center justify-center gap-1.5 p-4 bg-white rounded-xl hover:bg-neutral-100 transition-colors w-full"
             >
               <Navigation className="w-5 h-5 text-neutral-900" />
               <span className="text-xs text-neutral-900 font-medium">Navigate</span>
-            </button>
-            <button
-              onClick={handleOpenInGoogle}
-              className="flex flex-col items-center justify-center gap-1.5 p-4 bg-neutral-800 rounded-xl hover:bg-neutral-700 transition-colors"
-            >
-              <ExternalLink className="w-5 h-5 text-neutral-300" />
-              <span className="text-xs text-neutral-300">Open in Google</span>
             </button>
           </div>
 
