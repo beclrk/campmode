@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useState, useCallback, memo, Fragment } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, memo, Fragment } from 'react';
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import Supercluster from 'supercluster';
@@ -161,7 +161,7 @@ function MapLayerControl({
   osApiKey?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = React.useRef<HTMLDivElement>(null);
   const hasOs = Boolean(osApiKey?.trim());
 
   useEffect(() => {
