@@ -60,23 +60,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
+  const PAGE_SIZE = 1000;
+
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { data: rows, error } = await supabase
-      .from('locations')
-      .select('id, name, type, lat, lng, description, address, price, facilities, images, website, phone, google_place_id, external_id, external_source, created_at, updated_at')
-      .gte('lat', cSwLat)
-      .lte('lat', cNeLat)
-      .gte('lng', cSwLng)
-      .lte('lng', cNeLng);
+    const allRows: Record<string, unknown>[] = [];
+    let offset = 0;
+    let hasMore = true;
 
-    if (error) {
-      console.error('Supabase places query error:', error);
-      return res.status(500).json({ error: error.message, code: error.code });
+    while (hasMore) {
+      const { data: rows, error } = await supabase
+        .from('locations')
+        .select('id, name, type, lat, lng, description, address, price, facilities, images, website, phone, google_place_id, external_id, external_source, created_at, updated_at')
+        .gte('lat', cSwLat)
+        .lte('lat', cNeLat)
+        .gte('lng', cSwLng)
+        .lte('lng', cNeLng)
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      if (error) {
+        console.error('Supabase places query error:', error);
+        return res.status(500).json({ error: error.message, code: error.code });
+      }
+
+      const page = (rows ?? []) as Record<string, unknown>[];
+      allRows.push(...page);
+      hasMore = page.length === PAGE_SIZE;
+      offset += PAGE_SIZE;
     }
 
     const now = new Date().toISOString();
-    const locations = (rows ?? [])
+    const locations = allRows
       .filter((r: { lat: number; lng: number }) => inUK(r.lat, r.lng))
       .map((r: {
         id: string;
