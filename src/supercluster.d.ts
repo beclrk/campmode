@@ -17,5 +17,6 @@ declare module 'supercluster' {
     load(points: PointFeature<P>[]): this;
     getClusters(bbox: [number, number, number, number], zoom: number): PointFeature<P>[];
     getClusterExpansionZoom(clusterId: number): number;
+    getLeaves(clusterId: number, limit: number, offset: number): PointFeature<P>[];
   }
 }

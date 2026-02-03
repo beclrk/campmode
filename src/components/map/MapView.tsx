@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useState, useCallback, memo } from 'react';
+import { useEffect, useRef, useMemo, useState, useCallback, memo, Fragment } from 'react';
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import Supercluster from 'supercluster';
@@ -210,6 +210,8 @@ function ClusterLayer({
     };
   }, [map, updateClusters]);
 
+  const MAX_CLUSTER_COUNT_BEFORE_EXPAND = 5;
+
   return (
     <>
       {clusters.map((feature) => {
@@ -217,6 +219,42 @@ function ClusterLayer({
         const props = feature.properties;
         if (props.cluster) {
           const count = props.point_count ?? 0;
+          if (count <= MAX_CLUSTER_COUNT_BEFORE_EXPAND) {
+            try {
+              const leaves = index.getLeaves(feature.id as number, Infinity, 0) as ClusterPoint[];
+              leaves.sort((a, b) => markerOrder(a) - markerOrder(b));
+              return (
+                <Fragment key={`cluster-leaves-${feature.id}`}>
+                  {leaves.map((leaf) => {
+                    const loc = leaf.properties.location;
+                    if (!loc) return null;
+                    return (
+                      <LocationMarker
+                        key={loc.id}
+                        location={loc}
+                        isSelected={selectedLocation?.id === loc.id}
+                        onSelect={onLocationSelect}
+                      />
+                    );
+                  })}
+                </Fragment>
+              );
+            } catch {
+              return (
+                <Marker
+                  key={`cluster-${feature.id}`}
+                  position={[lat, lng]}
+                  icon={getClusterIcon(count)}
+                  eventHandlers={{
+                    click: () => {
+                      const expansionZoom = Math.min(index.getClusterExpansionZoom(feature.id as number), 18);
+                      map.flyTo([lat, lng], expansionZoom, { duration: 0.3 });
+                    },
+                  }}
+                />
+              );
+            }
+          }
           return (
             <Marker
               key={`cluster-${feature.id}`}
