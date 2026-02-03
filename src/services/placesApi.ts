@@ -32,8 +32,23 @@ export async function fetchGooglePlacesInBounds(bounds: Bounds): Promise<Locatio
       return [];
     }
     if (!res.ok) return [];
-    const data = (await res.json()) as { locations?: Location[] };
-    return Array.isArray(data.locations) ? data.locations : [];
+    const data = (await res.json()) as { locations?: Location[] } | Location[];
+    const raw = Array.isArray(data) ? data : (Array.isArray(data.locations) ? data.locations : []);
+    const locations = raw.filter(
+      (loc): loc is Location =>
+        loc != null &&
+        typeof loc.id === 'string' &&
+        typeof loc.lat === 'number' &&
+        typeof loc.lng === 'number' &&
+        !Number.isNaN(loc.lat) &&
+        !Number.isNaN(loc.lng)
+    );
+    if (import.meta.env?.DEV) {
+      console.log('[CampMode] /api/places:', raw.length, 'raw,', locations.length, 'valid');
+    } else if (raw.length > 0 && locations.length === 0) {
+      console.warn('[CampMode] /api/places returned', raw.length, 'items but none had valid id/lat/lng');
+    }
+    return locations;
   } catch (e) {
     if (typeof console !== 'undefined' && console.warn) {
       console.warn('[CampMode] /api/places fetch failed:', e);

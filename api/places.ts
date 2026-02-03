@@ -189,6 +189,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const allLocations = Array.from(byId.values());
+  res.setHeader('Content-Type', 'application/json');
   res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
   return res.status(200).json({ locations: allLocations });
 }

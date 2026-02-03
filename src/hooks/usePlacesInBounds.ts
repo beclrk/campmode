@@ -16,21 +16,31 @@ export function usePlacesInBounds(bounds: Bounds | null) {
     const key = `${bounds.sw[0].toFixed(4)},${bounds.sw[1].toFixed(4)},${bounds.ne[0].toFixed(4)},${bounds.ne[1].toFixed(4)}`;
     if (lastBoundsRef.current === key) return;
 
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      debounceRef.current = null;
+    const doFetch = () => {
       lastBoundsRef.current = key;
       setLoading(true);
       fetchAllPlacesInBounds(bounds)
         .then((list) => {
-          setLocations(list);
+          setLocations((prev) => (list.length > 0 ? list : prev));
         })
         .catch(() => {
-          setLocations([]);
+          setLocations((prev) => prev);
         })
         .finally(() => {
           setLoading(false);
         });
+    };
+
+    const isInitial = lastBoundsRef.current === null;
+    if (isInitial) {
+      doFetch();
+      return;
+    }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
+      doFetch();
     }, DEBOUNCE_MS);
 
     return () => {
