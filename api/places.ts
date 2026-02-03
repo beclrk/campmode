@@ -8,6 +8,35 @@ type VercelResponse = {
 const GOOGLE_PLACES_BASE = 'https://maps.googleapis.com/maps/api/place/textsearch/json';
 const OCM_BASE = 'https://api.openchargemap.io/v3/poi/';
 const PLACE_TYPES = ['campground', 'rest_stop', 'electric_vehicle_charging_station'] as const;
+/** Google Places max radius (m). We cover the full visible bounds with a grid of requests. */
+const GOOGLE_MAX_RADIUS_M = 50000;
+/** Grid step in m so 50km-radius circles overlap and cover the screen. */
+const GRID_STEP_M = 70000;
+
+/** Return grid of (lat, lng) centers that cover the bounds so the full view is loaded. */
+function getGridCenters(
+  swLat: number,
+  swLng: number,
+  neLat: number,
+  neLng: number
+): { lat: number; lng: number }[] {
+  const centerLat = (swLat + neLat) / 2;
+  const latMetersPerDeg = 111320;
+  const lngMetersPerDeg = 111320 * Math.cos((centerLat * Math.PI) / 180);
+  const heightM = (neLat - swLat) * latMetersPerDeg;
+  const widthM = (neLng - swLng) * lngMetersPerDeg;
+  const rows = Math.max(1, Math.ceil(heightM / GRID_STEP_M));
+  const cols = Math.max(1, Math.ceil(widthM / GRID_STEP_M));
+  const centers: { lat: number; lng: number }[] = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const lat = swLat + ((r + 0.5) / rows) * (neLat - swLat);
+      const lng = swLng + ((c + 0.5) / cols) * (neLng - swLng);
+      centers.push({ lat, lng });
+    }
+  }
+  return centers;
+}
 type PlaceType = (typeof PLACE_TYPES)[number];
 
 type LocationItem = {
@@ -155,43 +184,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Invalid bounds: swLat, swLng, neLat, neLng required' });
   }
 
-  const centerLat = (swLat + neLat) / 2;
-  const centerLng = (swLng + neLng) / 2;
-  const radiusM = Math.min(50000, Math.round(
-    Math.sqrt(Math.pow((neLat - swLat) * 111320, 2) + Math.pow((neLng - swLng) * 111320 * Math.cos((centerLat * Math.PI) / 180), 2)) / 2
-  ));
-
   const byId = new Map<string, LocationItem>();
 
   // Always fetch Open Charge Map server-side (no CORS) so EV chargers show even without Google key
   const ocmLocations = await fetchOcmInBounds(swLat, swLng, neLat, neLng);
   for (const loc of ocmLocations) byId.set(loc.id, loc);
 
+  // Cover the full visible bounds with a grid of Google requests (max radius 50km per request)
   const key = process.env.GOOGLE_PLACES_API_KEY;
   if (key) {
+    const gridCenters = getGridCenters(swLat, swLng, neLat, neLng);
     for (const type of PLACE_TYPES) {
-      const url = new URL(GOOGLE_PLACES_BASE);
-      url.searchParams.set('query', type.replace(/_/g, ' '));
-      url.searchParams.set('location', `${centerLat},${centerLng}`);
-      url.searchParams.set('radius', String(radiusM));
-      url.searchParams.set('type', type);
-      url.searchParams.set('key', key);
+      for (const { lat: centerLat, lng: centerLng } of gridCenters) {
+        const url = new URL(GOOGLE_PLACES_BASE);
+        url.searchParams.set('query', type.replace(/_/g, ' '));
+        url.searchParams.set('location', `${centerLat},${centerLng}`);
+        url.searchParams.set('radius', String(GOOGLE_MAX_RADIUS_M));
+        url.searchParams.set('type', type);
+        url.searchParams.set('key', key);
 
-      try {
-        const resp = await fetch(url.toString());
-        const data = (await resp.json()) as {
-          status: string;
-          results?: GooglePlaceResult[];
-          error_message?: string;
-        };
-        if (data.status === 'OK' && Array.isArray(data.results)) {
-          for (const r of data.results) {
-            const loc = normalizePlace(r, type);
-            if (loc) byId.set(loc.id, loc);
+        try {
+          const resp = await fetch(url.toString());
+          const data = (await resp.json()) as {
+            status: string;
+            results?: GooglePlaceResult[];
+            error_message?: string;
+          };
+          if (data.status === 'OK' && Array.isArray(data.results)) {
+            for (const r of data.results) {
+              const loc = normalizePlace(r, type);
+              if (loc) byId.set(loc.id, loc);
+            }
           }
+        } catch (e) {
+          console.error('Google Places fetch error:', e);
         }
-      } catch (e) {
-        console.error('Google Places fetch error:', e);
       }
     }
   }

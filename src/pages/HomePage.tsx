@@ -99,7 +99,7 @@ export default function HomePage() {
   const baseLocations = apiLocations.length > 0 ? apiLocations : sampleLocations;
 
   // When zoomed out, show top N by popularity (API already sorts by rating × review count)
-  const MAX_MARKERS_WHEN_ZOOMED_OUT = 250;
+  const MAX_MARKERS_WHEN_ZOOMED_OUT = 600;
   const locationsToShow = useMemo(() => {
     if (zoom <= 8) return baseLocations.slice(0, MAX_MARKERS_WHEN_ZOOMED_OUT);
     return baseLocations;
