@@ -13,7 +13,10 @@ const GOOGLE_MAX_RADIUS_M = 50000;
 /** Grid step in m so 50km-radius circles overlap and cover the screen. */
 const GRID_STEP_M = 70000;
 
-/** Return grid of (lat, lng) centers that cover the bounds so the full view is loaded. */
+/** Max grid size so we stay under Vercel timeout and Google rate limits. */
+const MAX_GRID_CELLS = 9;
+
+/** Return grid of (lat, lng) centers that cover the bounds. Capped so the API completes in time. */
 function getGridCenters(
   swLat: number,
   swLng: number,
@@ -25,8 +28,12 @@ function getGridCenters(
   const lngMetersPerDeg = 111320 * Math.cos((centerLat * Math.PI) / 180);
   const heightM = (neLat - swLat) * latMetersPerDeg;
   const widthM = (neLng - swLng) * lngMetersPerDeg;
-  const rows = Math.max(1, Math.ceil(heightM / GRID_STEP_M));
-  const cols = Math.max(1, Math.ceil(widthM / GRID_STEP_M));
+  let rows = Math.max(1, Math.ceil(heightM / GRID_STEP_M));
+  let cols = Math.max(1, Math.ceil(widthM / GRID_STEP_M));
+  while (rows * cols > MAX_GRID_CELLS) {
+    if (rows > cols) rows = Math.max(1, rows - 1);
+    else cols = Math.max(1, cols - 1);
+  }
   const centers: { lat: number; lng: number }[] = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
