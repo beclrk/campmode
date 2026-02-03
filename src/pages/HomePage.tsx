@@ -101,6 +101,9 @@ export default function HomePage() {
   // Prefer real-world data whenever we have any from the API; otherwise sample data
   const baseLocations = apiLocations.length > 0 ? apiLocations : sampleLocations;
 
+  /** When showing "All", cap EV chargers so campsites and rest stops aren't overwhelmed. */
+  const MAX_EV_CHARGERS_WHEN_SHOWING_ALL = 300;
+
   // Show all locations at any zoom (clustering in MapView handles performance)
   const filteredLocations = useMemo(() => {
     let result = baseLocations;
@@ -108,6 +111,13 @@ export default function HomePage() {
     // Filter by type (use normalized type so campsite/campground both match)
     if (filter !== 'all') {
       result = result.filter((loc) => normalizeType(loc.type ?? '') === filter);
+    } else {
+      // "All" view: prioritise campsites and rest stops; cap EV chargers so they don't overwhelm
+      const campsites = result.filter((l) => normalizeType(l.type ?? '') === 'campsite');
+      const restStops = result.filter((l) => normalizeType(l.type ?? '') === 'rest_stop');
+      const evChargers = result.filter((l) => normalizeType(l.type ?? '') === 'ev_charger');
+      const evCapped = evChargers.slice(0, MAX_EV_CHARGERS_WHEN_SHOWING_ALL);
+      result = [...campsites, ...restStops, ...evCapped];
     }
 
     // Filter by search query
