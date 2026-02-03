@@ -135,6 +135,13 @@ function BoundsReporter({ onBoundsChange, onZoomChange }: { onBoundsChange: (bou
   return null;
 }
 
+/** Z-order: campsites on top, then rest stops, then EV chargers at the back. Higher zIndexOffset = in front. */
+function getMarkerZIndexOffset(type: string): number {
+  if (type === 'ev_charger') return -1000;
+  if (type === 'rest_stop') return 0;
+  return 1000; // campsite
+}
+
 const LocationMarker = memo(function LocationMarker({
   location,
   isSelected,
@@ -148,6 +155,7 @@ const LocationMarker = memo(function LocationMarker({
     <Marker
       position={[location.lat, location.lng]}
       icon={createMarkerIcon(location.type, isSelected)}
+      zIndexOffset={getMarkerZIndexOffset(location.type ?? '')}
       eventHandlers={{ click: () => onSelect(location) }}
     />
   );
@@ -180,7 +188,7 @@ function ClusterLayer({
     return supercluster;
   }, [locations]);
 
-  /** Z-order: draw EV chargers first (behind), then rest_stop, then campsite (on top) so campsites/rest stops are visible over EV chargers at same location. */
+  /** Draw order (back to front): EV chargers, then rest stops, then campsites. Lower sort key = drawn first = behind. */
   const markerOrder = (f: ClusterPoint): number => {
     if (f.properties.cluster) return 0;
     const type = f.properties.location?.type ?? '';
