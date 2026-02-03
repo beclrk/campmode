@@ -115,17 +115,45 @@ export default function HomePage() {
   /** When all three types are selected, cap EV chargers so campsites and rest stops aren't overwhelmed. */
   const MAX_EV_CHARGERS_WHEN_ALL_SELECTED = 300;
 
+  /** Spatially sample locations so the cap is spread across the visible area (fixes EV chargers only loading in one part of the map). */
+  const spatiallyCapLocations = useCallback((locations: Location[], maxCount: number): Location[] => {
+    if (locations.length <= maxCount) return locations;
+    const lats = locations.map((l) => l.lat);
+    const lngs = locations.map((l) => l.lng);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    const latSpan = maxLat - minLat || 1;
+    const lngSpan = maxLng - minLng || 1;
+    const GRID_SIZE = 10;
+    const cells = new Map<string, Location[]>();
+    for (const loc of locations) {
+      const gi = Math.min(Math.floor(((loc.lat - minLat) / latSpan) * GRID_SIZE), GRID_SIZE - 1);
+      const gj = Math.min(Math.floor(((loc.lng - minLng) / lngSpan) * GRID_SIZE), GRID_SIZE - 1);
+      const key = `${gi},${gj}`;
+      if (!cells.has(key)) cells.set(key, []);
+      cells.get(key)!.push(loc);
+    }
+    const perCell = Math.ceil(maxCount / cells.size);
+    const out: Location[] = [];
+    for (const list of cells.values()) {
+      out.push(...list.slice(0, perCell));
+    }
+    return out.slice(0, maxCount);
+  }, []);
+
   // Show locations whose type is in selectedTypes (clustering in MapView handles performance)
   const filteredLocations = useMemo(() => {
     // Filter by selected types (use normalized type so campsite/campground both match)
     let result = baseLocations.filter((loc) => selectedTypes.has(normalizeType(loc.type ?? '')));
 
-    // When all three types selected: prioritise campsites and rest stops; cap EV chargers
+    // When all three types selected: prioritise campsites and rest stops; cap EV chargers with spatial distribution
     if (selectedTypes.size === 3) {
       const campsites = result.filter((l) => normalizeType(l.type ?? '') === 'campsite');
       const restStops = result.filter((l) => normalizeType(l.type ?? '') === 'rest_stop');
       const evChargers = result.filter((l) => normalizeType(l.type ?? '') === 'ev_charger');
-      const evCapped = evChargers.slice(0, MAX_EV_CHARGERS_WHEN_ALL_SELECTED);
+      const evCapped = spatiallyCapLocations(evChargers, MAX_EV_CHARGERS_WHEN_ALL_SELECTED);
       result = [...campsites, ...restStops, ...evCapped];
     }
 
@@ -147,7 +175,7 @@ export default function HomePage() {
     }
 
     return result;
-  }, [baseLocations, selectedTypes, searchQuery]);
+  }, [baseLocations, selectedTypes, searchQuery, spatiallyCapLocations]);
 
   // Count by type (from full base so pills show total available; use normalized type)
   const counts = useMemo(() => ({
