@@ -94,6 +94,10 @@ export default function HomePage() {
 
   const { positions: routePositions } = useRouteGeometry(userLocation, routeStops);
 
+  // Normalize type so filter/counts work even if API sends 'campground' etc.
+  const normalizeType = (type: string): LocationType =>
+    type === 'ev_charger' ? 'ev_charger' : type === 'rest_stop' ? 'rest_stop' : 'campsite';
+
   // Prefer real-world data whenever we have any from the API; otherwise sample data
   const baseLocations = apiLocations.length > 0 ? apiLocations : sampleLocations;
 
@@ -101,9 +105,9 @@ export default function HomePage() {
   const filteredLocations = useMemo(() => {
     let result = baseLocations;
 
-    // Filter by type
+    // Filter by type (use normalized type so campsite/campground both match)
     if (filter !== 'all') {
-      result = result.filter((loc) => loc.type === filter);
+      result = result.filter((loc) => normalizeType(loc.type ?? '') === filter);
     }
 
     // Filter by search query
@@ -112,20 +116,26 @@ export default function HomePage() {
       result = result.filter(
         (loc) =>
           loc.name.toLowerCase().includes(query) ||
-          loc.description.toLowerCase().includes(query) ||
-          loc.address.toLowerCase().includes(query)
+          (loc.description ?? '').toLowerCase().includes(query) ||
+          (loc.address ?? '').toLowerCase().includes(query)
       );
+    }
+
+    // When a category has no results from API, show sample locations of that type so the map isn't empty
+    if (filter !== 'all' && result.length === 0 && baseLocations.length > 0) {
+      const sampleOfType = sampleLocations.filter((l) => normalizeType(l.type ?? '') === filter);
+      result = sampleOfType;
     }
 
     return result;
   }, [baseLocations, filter, searchQuery]);
 
-  // Count by type (from full base so pills show total available)
+  // Count by type (from full base so pills show total available; use normalized type)
   const counts = useMemo(() => ({
     all: baseLocations.length,
-    campsite: baseLocations.filter((l) => l.type === 'campsite').length,
-    ev_charger: baseLocations.filter((l) => l.type === 'ev_charger').length,
-    rest_stop: baseLocations.filter((l) => l.type === 'rest_stop').length,
+    campsite: baseLocations.filter((l) => normalizeType(l.type ?? '') === 'campsite').length,
+    ev_charger: baseLocations.filter((l) => normalizeType(l.type ?? '') === 'ev_charger').length,
+    rest_stop: baseLocations.filter((l) => normalizeType(l.type ?? '') === 'rest_stop').length,
   }), [baseLocations]);
 
   // Get reviews for selected location
