@@ -222,7 +222,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const [cSwLat, cSwLng, cNeLat, cNeLng] = clampBoundsToUK(swLat, swLng, neLat, neLng);
   const byId = new Map<string, LocationItem>();
 
-  // 1) Primary: load from Supabase (UK data synced by cron). If we have data, use it.
+  // 1) Load from Supabase (UK data synced by cron – offline backup).
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (supabaseUrl && supabaseServiceKey) {
@@ -275,18 +275,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             updated_at: r.updated_at ?? now,
           });
         }
-        const fromDb = Array.from(byId.values());
-        fromDb.sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
-        return res.status(200).json({ locations: fromDb });
       }
     } catch (e) {
       console.error('Supabase places fetch error:', e);
     }
   }
 
-  // 2) Fallback: live APIs (Google + OCM) for current viewport. UK only.
+  // 2) Merge live APIs (Google + OCM) for current viewport so we show maximum locations. UK only.
   const ocmLocations = await fetchOcmInBounds(cSwLat, cSwLng, cNeLat, cNeLng);
   for (const loc of ocmLocations) {
     if (inUK(loc.lat, loc.lng)) byId.set(loc.id, loc);

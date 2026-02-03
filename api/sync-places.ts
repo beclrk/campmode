@@ -12,7 +12,8 @@ const GOOGLE_PLACES_BASE = 'https://maps.googleapis.com/maps/api/place/textsearc
 const OCM_BASE = 'https://api.openchargemap.io/v3/poi/';
 const PLACE_TYPES = ['campground', 'rest_stop', 'electric_vehicle_charging_station'] as const;
 const GOOGLE_MAX_RADIUS_M = 50000;
-const MAX_GRID_CELLS = 9;
+/** Larger grid so we download comprehensive UK data to Supabase for offline viewing. */
+const MAX_GRID_CELLS = 24;
 const GRID_STEP_M = 70000;
 
 /** UK bounds for sync (same as app default). */
@@ -115,7 +116,7 @@ function formatOcmDescription(r: OCMResult): string {
 
 async function fetchOcmInBounds(swLat: number, swLng: number, neLat: number, neLng: number): Promise<SupabaseLocationRow[]> {
   const bbox = `${swLat},${swLng},${neLat},${neLng}`;
-  const url = `${OCM_BASE}?output=json&boundingbox=${bbox}&maxresults=300&compact=true&verbose=false`;
+  const url = `${OCM_BASE}?output=json&boundingbox=${bbox}&maxresults=500&compact=true&verbose=false`;
   try {
     const resp = await fetch(url);
     if (!resp.ok) return [];
