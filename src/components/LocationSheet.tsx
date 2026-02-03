@@ -160,6 +160,15 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
     );
   };
 
+  const handleOpenInGoogle = () => {
+    if (location.google_place_id) {
+      window.open(`https://www.google.com/maps/place/?q=place_id:${location.google_place_id}`, '_blank');
+    } else {
+      const query = [location.name, location.address].filter(Boolean).join(' ') || `${location.lat},${location.lng}`;
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank');
+    }
+  };
+
   const handleWebsite = () => {
     if (location.website) {
       window.open(location.website, '_blank');
@@ -439,9 +448,9 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
             </div>
           )}
 
-          {/* Action buttons */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            {location.website && (
+          {/* Action buttons: Website, Call, Navigate, Open in Google */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            {location.website && typeof location.website === 'string' && (
               <button
                 onClick={handleWebsite}
                 className="flex flex-col items-center justify-center gap-1.5 p-4 bg-neutral-800 rounded-xl hover:bg-neutral-700 transition-colors"
@@ -461,14 +470,17 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
             )}
             <button
               onClick={handleNavigate}
-              className={cn(
-                "flex flex-col items-center justify-center gap-1.5 p-4 bg-white rounded-xl hover:bg-neutral-100 transition-colors",
-                !location.website && !location.phone && "col-span-3",
-                (location.website && !location.phone) || (!location.website && location.phone) ? "col-span-2" : ""
-              )}
+              className="flex flex-col items-center justify-center gap-1.5 p-4 bg-white rounded-xl hover:bg-neutral-100 transition-colors"
             >
               <Navigation className="w-5 h-5 text-neutral-900" />
               <span className="text-xs text-neutral-900 font-medium">Navigate</span>
+            </button>
+            <button
+              onClick={handleOpenInGoogle}
+              className="flex flex-col items-center justify-center gap-1.5 p-4 bg-neutral-800 rounded-xl hover:bg-neutral-700 transition-colors"
+            >
+              <ExternalLink className="w-5 h-5 text-neutral-300" />
+              <span className="text-xs text-neutral-300">Open in Google</span>
             </button>
           </div>
 
