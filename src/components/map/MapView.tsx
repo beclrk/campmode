@@ -180,14 +180,24 @@ function ClusterLayer({
     return supercluster;
   }, [locations]);
 
+  /** Z-order: draw EV chargers first (behind), then rest_stop, then campsite (on top) so campsites/rest stops are visible over EV chargers at same location. */
+  const markerOrder = (f: ClusterPoint): number => {
+    if (f.properties.cluster) return 0;
+    const type = f.properties.location?.type ?? '';
+    if (type === 'ev_charger') return 1;
+    if (type === 'rest_stop') return 2;
+    return 3; // campsite on top
+  };
+
   const updateClusters = useCallback(() => {
     const b = map.getBounds();
     const sw = b.getSouthWest();
     const ne = b.getNorthEast();
     const zoom = map.getZoom();
     const bbox: [number, number, number, number] = [sw.lng, sw.lat, ne.lng, ne.lat];
-    const result = index.getClusters(bbox, zoom);
-    setClusters(result as ClusterPoint[]);
+    const result = index.getClusters(bbox, zoom) as ClusterPoint[];
+    result.sort((a, b) => markerOrder(a) - markerOrder(b));
+    setClusters(result);
   }, [map, index]);
 
   useEffect(() => {
