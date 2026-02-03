@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -10,6 +10,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 
 function SettingsSection({
   title,
@@ -111,6 +112,42 @@ export default function SettingsPage() {
   const [distanceUnits, setDistanceUnits] = useState<'miles' | 'km'>('miles');
   const [notifySavedPlaces, setNotifySavedPlaces] = useState(false);
   const [notifyUpdates, setNotifyUpdates] = useState(true);
+  const [editingName, setEditingName] = useState(false);
+  const [displayName, setDisplayName] = useState(user?.user_metadata?.full_name ?? '');
+  useEffect(() => {
+    setDisplayName(user?.user_metadata?.full_name ?? '');
+  }, [user?.user_metadata?.full_name]);
+  const [nameSaving, setNameSaving] = useState(false);
+  const [changePasswordSending, setChangePasswordSending] = useState(false);
+  const [changePasswordMessage, setChangePasswordMessage] = useState<string | null>(null);
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const [deleteAccountConfirm, setDeleteAccountConfirm] = useState(false);
+
+  const handleSaveName = async () => {
+    if (!user) return;
+    setNameSaving(true);
+    setAccountError(null);
+    const { error } = await supabase.auth.updateUser({ data: { full_name: displayName.trim() || undefined } });
+    setNameSaving(false);
+    if (error) {
+      setAccountError(error.message);
+      return;
+    }
+    setEditingName(false);
+  };
+
+  const handleChangePassword = async () => {
+    if (!user?.email) return;
+    setChangePasswordSending(true);
+    setChangePasswordMessage(null);
+    setAccountError(null);
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setChangePasswordSending(false);
+    if (error) setAccountError(error.message);
+    else setChangePasswordMessage('Check your email for a link to change your password.');
+  };
 
   return (
     <div className="min-h-screen bg-neutral-950 flex flex-col">
@@ -189,17 +226,106 @@ export default function SettingsPage() {
         <SettingsSection title="Account" icon={User}>
           {user ? (
             <>
+              {/* Display name */}
+              {editingName ? (
+                <div className="p-4 border-b border-neutral-800">
+                  <label className="block text-sm font-medium text-neutral-400 mb-2">Display name</label>
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Your name"
+                    className="w-full px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 text-white placeholder-neutral-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none"
+                    autoFocus
+                  />
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      type="button"
+                      onClick={handleSaveName}
+                      disabled={nameSaving}
+                      className="px-4 py-2 rounded-xl bg-green-500 text-white font-medium hover:bg-green-600 disabled:opacity-50"
+                    >
+                      {nameSaving ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDisplayName(user?.user_metadata?.full_name ?? '');
+                        setEditingName(false);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-neutral-700 text-neutral-300 font-medium hover:bg-neutral-600"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <SettingsRow
+                  label="Display name"
+                  description={user?.user_metadata?.full_name || 'Not set'}
+                  right={
+                    <button
+                      type="button"
+                      onClick={() => setEditingName(true)}
+                      className="text-sm text-green-500 hover:text-green-400 font-medium"
+                    >
+                      Edit
+                    </button>
+                  }
+                />
+              )}
+              {/* Email (read-only) */}
               <SettingsRow
-                label={user?.user_metadata?.full_name || 'User'}
-                description={user?.email}
+                label="Email"
+                description={user?.email ?? ''}
               />
+              {accountError && (
+                <div className="px-4 py-3 border-b border-neutral-800 bg-red-500/10">
+                  <p className="text-sm text-red-400">{accountError}</p>
+                </div>
+              )}
+              {/* Change password */}
+              <SettingsRow
+                label="Change password"
+                description={changePasswordSending ? 'Sending link…' : changePasswordMessage ?? 'Send a link to your email to set a new password'}
+                onPress={changePasswordSending ? undefined : handleChangePassword}
+              />
+              {/* Sign out */}
               <SettingsRow
                 label="Sign out"
+                description="Sign out of your account on this device"
                 onPress={() => {
                   signOut();
                   navigate('/');
                 }}
               />
+              {/* Delete account */}
+              <button
+                type="button"
+                onClick={() => setDeleteAccountConfirm(true)}
+                className="w-full text-left border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/50 transition-colors py-4 px-4 flex items-center justify-between"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-red-400 font-medium">Delete account</p>
+                  <p className="text-neutral-500 text-sm mt-0.5">Permanently remove your account and data</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-neutral-500 flex-shrink-0 ml-2" />
+              </button>
+              {deleteAccountConfirm && (
+                <div className="p-4 border-t border-neutral-800 bg-red-500/5">
+                  <p className="text-sm text-neutral-300 mb-3">
+                    To delete your account and all saved data, please email us at{' '}
+                    <a href="mailto:support@campmode.app" className="text-green-500 hover:underline">support@campmode.app</a> with the subject &quot;Delete my account&quot; and we&apos;ll process your request.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteAccountConfirm(false)}
+                    className="text-sm text-neutral-400 hover:text-white"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             <SettingsRow
