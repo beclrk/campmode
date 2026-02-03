@@ -93,3 +93,44 @@ export function getLocationTypeColor(type: string): string {
       return '#6b7280'; // Gray
   }
 }
+
+/** Quality score: rating × log10(1 + reviews) + facility bonus. Higher reviews = more trustworthy (e.g. 4.8 with 200 > 5 with 2). */
+export function qualityScore(loc: { rating?: number; review_count?: number; user_ratings_total?: number; facilities?: string[] }): number {
+  const rating = loc.rating ?? 0;
+  const reviews = loc.review_count ?? loc.user_ratings_total ?? 0;
+  const facilityBonus = 0.1 * (loc.facilities?.length ?? 0);
+  return rating * Math.log10(1 + reviews) + facilityBonus;
+}
+
+/** Location type for grouping (normalized). */
+export function normalizeLocationType(type: string): 'campsite' | 'rest_stop' | 'ev_charger' {
+  if (type === 'ev_charger') return 'ev_charger';
+  if (type === 'rest_stop') return 'rest_stop';
+  return 'campsite';
+}
+
+/** Top 10% of each category by quality score. Returns Set of location ids. */
+export function getTop10PercentIds(
+  locations: Array<{
+    id: string;
+    type?: string;
+    rating?: number;
+    review_count?: number;
+    user_ratings_total?: number;
+    facilities?: string[];
+  }>
+): Set<string> {
+  const byType = new Map<string, typeof locations>();
+  for (const loc of locations) {
+    const t = normalizeLocationType(loc.type ?? '');
+    if (!byType.has(t)) byType.set(t, []);
+    byType.get(t)!.push(loc);
+  }
+  const ids = new Set<string>();
+  for (const list of byType.values()) {
+    const sorted = [...list].sort((a, b) => qualityScore(b) - qualityScore(a));
+    const n = Math.max(1, Math.ceil(sorted.length * 0.1));
+    for (let i = 0; i < n; i++) ids.add(sorted[i].id);
+  }
+  return ids;
+}

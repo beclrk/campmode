@@ -108,6 +108,13 @@ body.promo-banner-visible .settings-scroll-bottom {
   padding-bottom: calc(3rem + var(--app-promo-banner-height) + env(safe-area-inset-bottom, 0px));
 }
 
+.list-view-scroll-bottom {
+  padding-bottom: calc(3rem + env(safe-area-inset-bottom, 0px));
+}
+body.promo-banner-visible .list-view-scroll-bottom {
+  padding-bottom: calc(3rem + var(--app-promo-banner-height) + env(safe-area-inset-bottom, 0px));
+}
+
 /* Location sheet: sit above browser bottom bar (Chrome back/new tab etc.) */
 .location-sheet-wrapper {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 56px);

@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MapView, { type BasemapId } from '@/components/map/MapView';
+import LocationListView from '@/components/LocationListView';
 import SearchBar from '@/components/SearchBar';
 import FilterPills from '@/components/FilterPills';
 import LocationSheet from '@/components/LocationSheet';
@@ -12,8 +13,8 @@ import { usePlacesInBounds } from '@/hooks/usePlacesInBounds';
 import { sampleLocations } from '@/data/locations';
 import { type Bounds, DEFAULT_UK_BOUNDS } from '@/services/placesApi';
 import { Location, LocationType, Review } from '@/types';
-import { cn } from '@/lib/utils';
-import { Route } from 'lucide-react';
+import { cn, qualityScore, getTop10PercentIds, normalizeLocationType } from '@/lib/utils';
+import { Route, Map, List } from 'lucide-react';
 
 // Sample reviews - in production these come from Supabase
 const sampleReviews: Review[] = [
@@ -62,6 +63,7 @@ export default function HomePage() {
   const [routePanelOpen, setRoutePanelOpen] = useState(false);
   const [showRouteEmptyHint, setShowRouteEmptyHint] = useState(false);
   const [basemap, setBasemap] = useState<BasemapId>('default');
+  const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const routeHintRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState<Bounds | null>(DEFAULT_UK_BOUNDS);
 
@@ -119,10 +121,6 @@ export default function HomePage() {
 
   const { positions: routePositions } = useRouteGeometry(userLocation, routeStops);
 
-  // Normalize type so filter/counts work even if API sends 'campground' etc.
-  const normalizeType = (type: string): LocationType =>
-    type === 'ev_charger' ? 'ev_charger' : type === 'rest_stop' ? 'rest_stop' : 'campsite';
-
   // Prefer real-world data whenever we have any from the API; otherwise sample data
   const baseLocations = apiLocations.length > 0 ? apiLocations : sampleLocations;
 
@@ -159,14 +157,12 @@ export default function HomePage() {
 
   // Show locations whose type is in selectedTypes (clustering in MapView handles performance)
   const filteredLocations = useMemo(() => {
-    // Filter by selected types (use normalized type so campsite/campground both match)
-    let result = baseLocations.filter((loc) => selectedTypes.has(normalizeType(loc.type ?? '')));
+    let result = baseLocations.filter((loc) => selectedTypes.has(normalizeLocationType(loc.type ?? '')));
 
-    // When all three types selected: prioritise campsites and rest stops; cap EV chargers with spatial distribution
     if (selectedTypes.size === 3) {
-      const campsites = result.filter((l) => normalizeType(l.type ?? '') === 'campsite');
-      const restStops = result.filter((l) => normalizeType(l.type ?? '') === 'rest_stop');
-      const evChargers = result.filter((l) => normalizeType(l.type ?? '') === 'ev_charger');
+      const campsites = result.filter((l) => normalizeLocationType(l.type ?? '') === 'campsite');
+      const restStops = result.filter((l) => normalizeLocationType(l.type ?? '') === 'rest_stop');
+      const evChargers = result.filter((l) => normalizeLocationType(l.type ?? '') === 'ev_charger');
       const evCapped = spatiallyCapLocations(evChargers, MAX_EV_CHARGERS_WHEN_ALL_SELECTED);
       result = [...campsites, ...restStops, ...evCapped];
     }
@@ -182,20 +178,26 @@ export default function HomePage() {
       );
     }
 
-    // When a category has no results from API, show sample locations of that type so the map isn't empty
     if (result.length === 0 && baseLocations.length > 0) {
-      const sampleOfType = sampleLocations.filter((l) => selectedTypes.has(normalizeType(l.type ?? '')));
+      const sampleOfType = sampleLocations.filter((l) => selectedTypes.has(normalizeLocationType(l.type ?? '')));
       result = sampleOfType;
     }
 
     return result;
   }, [baseLocations, selectedTypes, searchQuery, spatiallyCapLocations]);
 
-  // Count by type (from full base so pills show total available; use normalized type)
+  // List view: same as filtered but sorted by quality (best first)
+  const locationsSortedByQuality = useMemo(() => {
+    return [...filteredLocations].sort((a, b) => qualityScore(b) - qualityScore(a));
+  }, [filteredLocations]);
+
+  // Top 10% per category (campsite, rest_stop, ev_charger) by quality — for crown badge on map and list
+  const top10PercentIds = useMemo(() => getTop10PercentIds(filteredLocations), [filteredLocations]);
+
   const counts = useMemo(() => ({
-    campsite: baseLocations.filter((l) => normalizeType(l.type ?? '') === 'campsite').length,
-    ev_charger: baseLocations.filter((l) => normalizeType(l.type ?? '') === 'ev_charger').length,
-    rest_stop: baseLocations.filter((l) => normalizeType(l.type ?? '') === 'rest_stop').length,
+    campsite: baseLocations.filter((l) => normalizeLocationType(l.type ?? '') === 'campsite').length,
+    ev_charger: baseLocations.filter((l) => normalizeLocationType(l.type ?? '') === 'ev_charger').length,
+    rest_stop: baseLocations.filter((l) => normalizeLocationType(l.type ?? '') === 'rest_stop').length,
   }), [baseLocations]);
 
   // Get reviews for selected location
@@ -219,21 +221,36 @@ export default function HomePage() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      {/* Map */}
-      <div className="absolute inset-0">
-        <MapView
-          locations={filteredLocations}
-          selectedLocation={selectedLocation}
-          onLocationSelect={setSelectedLocation}
-          center={mapCenter}
-          userLocation={userLocation}
-          routePositions={routePositions}
-          onBoundsChange={setBounds}
-          basemap={basemap}
-          onBasemapChange={setBasemap}
-          osApiKey={import.meta.env.VITE_OS_API_KEY}
-        />
-      </div>
+      {/* Map - default view */}
+      {viewMode === 'map' && (
+        <div className="absolute inset-0">
+          <MapView
+            locations={filteredLocations}
+            selectedLocation={selectedLocation}
+            onLocationSelect={setSelectedLocation}
+            center={mapCenter}
+            userLocation={userLocation}
+            routePositions={routePositions}
+            onBoundsChange={setBounds}
+            basemap={basemap}
+            onBasemapChange={setBasemap}
+            osApiKey={import.meta.env.VITE_OS_API_KEY}
+            top10PercentIds={top10PercentIds}
+          />
+        </div>
+      )}
+
+      {/* List view - sorted by quality */}
+      {viewMode === 'list' && (
+        <div className="absolute inset-0 pt-[180px] md:pt-[160px] flex flex-col min-h-0">
+          <LocationListView
+            locations={locationsSortedByQuality}
+            top10PercentIds={top10PercentIds}
+            onSelect={setSelectedLocation}
+            userLocation={userLocation}
+          />
+        </div>
+      )}
 
       {/* Top controls - z-[1000] so they sit above Leaflet map panes (200-700) */}
       <div className="absolute top-0 left-0 right-0 z-[1000] safe-top">
@@ -300,6 +317,36 @@ export default function HomePage() {
             onToggleType={toggleType}
             counts={counts}
           />
+
+          {/* View toggle: Map (default) | List */}
+          <div className="flex gap-1 mt-3">
+            <button
+              type="button"
+              onClick={() => setViewMode('map')}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors',
+                viewMode === 'map'
+                  ? 'bg-green-500/55 backdrop-blur-sm border border-green-400/25 text-white'
+                  : 'bg-neutral-800/80 text-neutral-400 hover:text-white hover:bg-neutral-700'
+              )}
+            >
+              <Map className="w-4 h-4" />
+              Map
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors',
+                viewMode === 'list'
+                  ? 'bg-green-500/55 backdrop-blur-sm border border-green-400/25 text-white'
+                  : 'bg-neutral-800/80 text-neutral-400 hover:text-white hover:bg-neutral-700'
+              )}
+            >
+              <List className="w-4 h-4" />
+              List
+            </button>
+          </div>
         </div>
       </div>
 
