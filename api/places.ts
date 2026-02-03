@@ -33,6 +33,31 @@ function inUK(lat: number, lng: number): boolean {
   );
 }
 
+/** Row shape returned by Supabase locations select (images is text[] in DB). */
+interface PlacesDbRow {
+  id?: string;
+  name: string;
+  type: string;
+  lat: number;
+  lng: number;
+  description: string;
+  address: string;
+  price?: string | null;
+  facilities: string[];
+  images: string[];
+  website?: string | null;
+  phone?: string | null;
+  google_place_id?: string | null;
+  external_id: string;
+  external_source: string;
+  rating?: number | null;
+  review_count?: number | null;
+  price_level?: number | null;
+  opening_hours?: unknown;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Map API: ONLY reads from Supabase. All data is synced by api/sync-places (daily or on-demand). */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -64,7 +89,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const allRows: Record<string, unknown>[] = [];
+    const allRows: PlacesDbRow[] = [];
     let offset = 0;
     let hasMore = true;
 
@@ -83,7 +108,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(500).json({ error: error.message, code: error.code });
       }
 
-      const page = (rows ?? []) as Record<string, unknown>[];
+      const page = (rows ?? []) as unknown as PlacesDbRow[];
       allRows.push(...page);
       hasMore = page.length === PAGE_SIZE;
       offset += PAGE_SIZE;
@@ -91,29 +116,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const now = new Date().toISOString();
     const locations = allRows
-      .filter((r: { lat: number; lng: number }) => inUK(r.lat, r.lng))
-      .map((r: {
-        id: string;
-        name: string;
-        type: string;
-        lat: number;
-        lng: number;
-        description: string;
-        address: string;
-        facilities: string[];
-        images: string[];
-        website?: string | null;
-        phone?: string | null;
-        google_place_id?: string | null;
-        external_id: string;
-        external_source: string;
-        rating?: number | null;
-        review_count?: number | null;
-        price_level?: number | null;
-        opening_hours?: unknown;
-        created_at: string;
-        updated_at: string;
-      }) => ({
+      .filter((r) => inUK(r.lat, r.lng))
+      .map((r) => ({
         id: r.id || `${r.external_source}-${r.external_id}`,
         name: r.name ?? '',
         type: r.type === 'ev_charger' ? 'ev_charger' : r.type === 'rest_stop' ? 'rest_stop' : 'campsite',

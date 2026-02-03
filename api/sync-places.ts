@@ -252,8 +252,8 @@ function googleResultToRow(r: GooglePlaceResult, googleType: (typeof PLACE_TYPES
   };
 }
 
-/** Fetch Google Places for UK with hard caps to avoid runaway API cost. */
-async function fetchAllGoogleUK(key: string): Promise<{ rows: SupabaseLocationRow[]; requestCount: number; capReached: boolean }> {
+/** Fetch Google Places for UK with hard caps (kept for reference; split sync uses fetchGoogleUKByType). */
+async function _fetchAllGoogleUK(key: string): Promise<{ rows: SupabaseLocationRow[]; requestCount: number; capReached: boolean }> {
   const gridCenters = getUKGridCenters();
   const byId = new Map<string, SupabaseLocationRow>();
   const now = new Date().toISOString();
@@ -373,9 +373,9 @@ async function fetchPlaceDetailsPhotos(placeId: string, key: string): Promise<st
 
 /**
  * Enrich top 10% highest-rated campsites and rest stops with Place Details photos (in-memory rows).
- * EV chargers are not enriched. Sort by rating desc, then review_count desc; take top 10% of each category.
+ * Kept for reference; split sync uses runEnrichPhotosFromSupabase.
  */
-async function enrichGoogleRowsWithPhotos(rows: SupabaseLocationRow[], key: string): Promise<void> {
+async function _enrichGoogleRowsWithPhotos(rows: SupabaseLocationRow[], key: string): Promise<void> {
   const hasPlaceId = (r: SupabaseLocationRow) => Boolean(r.google_place_id);
   const byRating = (a: SupabaseLocationRow, b: SupabaseLocationRow) => {
     const ra = a.rating ?? 0;
@@ -478,7 +478,7 @@ async function runEnrichPhotosFromSupabase(
   if (toEnrich.length === 0) return { enriched: 0 };
   const { error: upsertError } = await supabase
     .from('locations')
-    .upsert(toEnrich as Record<string, unknown>[], {
+    .upsert(toEnrich as unknown as Record<string, unknown>[], {
       onConflict: ['external_source', 'external_id'],
     });
   if (upsertError) {
@@ -535,7 +535,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       const { error } = await supabase
         .from('locations')
-        .upsert(ocmRows as Record<string, unknown>[], {
+        .upsert(ocmRows as unknown as Record<string, unknown>[], {
           onConflict: ['external_source', 'external_id'],
         });
       if (error) {
@@ -556,7 +556,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       const { error } = await supabase
         .from('locations')
-        .upsert(result.rows as Record<string, unknown>[], {
+        .upsert(result.rows as unknown as Record<string, unknown>[], {
           onConflict: ['external_source', 'external_id'],
         });
       if (error) {
@@ -583,7 +583,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       const { error } = await supabase
         .from('locations')
-        .upsert(result.rows as Record<string, unknown>[], {
+        .upsert(result.rows as unknown as Record<string, unknown>[], {
           onConflict: ['external_source', 'external_id'],
         });
       if (error) {
