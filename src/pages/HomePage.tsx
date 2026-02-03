@@ -10,7 +10,6 @@ import RoutePlannerPanel from '@/components/RoutePlannerPanel';
 import { useRouteGeometry } from '@/hooks/useRouteGeometry';
 import { useSavedPlaces } from '@/hooks/useSavedPlaces';
 import { usePlacesInBounds } from '@/hooks/usePlacesInBounds';
-import { sampleLocations } from '@/data/locations';
 import { type Bounds, DEFAULT_UK_BOUNDS } from '@/services/placesApi';
 import { Location, LocationType, Review } from '@/types';
 import { cn, qualityScore, getTop10PercentIds, normalizeLocationType } from '@/lib/utils';
@@ -121,8 +120,8 @@ export default function HomePage() {
 
   const { positions: routePositions } = useRouteGeometry(userLocation, routeStops);
 
-  // Prefer real-world data whenever we have any from the API; otherwise sample data
-  const baseLocations = apiLocations.length > 0 ? apiLocations : sampleLocations;
+  // Only show locations from API (no sample data while loading)
+  const baseLocations = apiLocations;
 
   /** When all three types are selected, cap EV chargers so campsites and rest stops aren't overwhelmed. */
   const MAX_EV_CHARGERS_WHEN_ALL_SELECTED = 300;
@@ -176,11 +175,6 @@ export default function HomePage() {
           (loc.description ?? '').toLowerCase().includes(query) ||
           (loc.address ?? '').toLowerCase().includes(query)
       );
-    }
-
-    if (result.length === 0 && baseLocations.length > 0) {
-      const sampleOfType = sampleLocations.filter((l) => selectedTypes.has(normalizeLocationType(l.type ?? '')));
-      result = sampleOfType;
     }
 
     return result;

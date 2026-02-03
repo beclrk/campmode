@@ -159,6 +159,8 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
   const openingHoursLines = formatOpeningHours(location.opening_hours ?? null);
   const openNow = isOpenNow(location.opening_hours ?? null);
   const priceLabel = getPriceLevelLabel(location.price_level, location.price);
+  const hasPrice = Boolean(priceLabel || location.price);
+  const pricePerNightSuffix = location.type === 'campsite' && hasPrice ? ' per night' : '';
 
   const handleNavigate = () => {
     window.open(
@@ -254,8 +256,10 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
                   {distanceM != null && (
                     <span>Distance: {formatDistanceMiles(distanceM)} away</span>
                   )}
-                  {priceLabel && (
-                    <span className="text-green-500 font-medium">{priceLabel}</span>
+                  {(priceLabel || location.price) && (
+                    <span className="text-green-500 font-medium">
+                      {priceLabel || location.price}{pricePerNightSuffix}
+                    </span>
                   )}
                 </div>
               )}
@@ -263,11 +267,11 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
           </div>
 
           {/* Quick info row: price + facilities as chips (exclude generic place-type labels) */}
-          {(priceLabel || facilitiesFiltered.length > 0) && (
+          {(hasPrice || facilitiesFiltered.length > 0) && (
             <div className="flex flex-wrap items-center gap-2 mb-4">
-              {priceLabel && (
+              {hasPrice && (
                 <span className="px-2.5 py-1 rounded-lg bg-neutral-800 text-neutral-300 text-sm font-medium">
-                  {priceLabel === 'Free' ? '💷 Free' : `💷 ${priceLabel}`}
+                  {priceLabel === 'Free' ? '💷 Free' : `💷 ${priceLabel || location.price}${pricePerNightSuffix}`}
                 </span>
               )}
               {facilitiesFiltered.slice(0, 4).map((f, i) => (
@@ -294,8 +298,10 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
             <MapPin className="w-5 h-5 text-neutral-400 shrink-0 mt-0.5" />
             <div>
               <p className="text-neutral-300 text-sm">{location.address || 'Address not listed'}</p>
-              {location.price && !priceLabel && (
-                <p className="text-green-500 font-semibold mt-1">{location.price}</p>
+              {location.price && location.price !== priceLabel && (
+                <p className="text-green-500 font-semibold mt-1">
+                  {location.price}{location.type === 'campsite' ? ' per night' : ''}
+                </p>
               )}
             </div>
             <ExternalLink className="w-4 h-4 text-neutral-500 shrink-0 mt-0.5" />
