@@ -266,6 +266,32 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
             </div>
           </div>
 
+          {/* Photos from Google (when available) */}
+          {location.images && location.images.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-5 px-5 mb-4" style={{ scrollSnapType: 'x mandatory' }}>
+              {location.images.map((src, i) => {
+                const url = src.startsWith('http') ? src : `${typeof window !== 'undefined' ? window.location.origin : ''}${src}`;
+                return (
+                  <a
+                    key={i}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-shrink-0 w-64 h-40 rounded-xl overflow-hidden bg-neutral-800"
+                    style={{ scrollSnapAlign: 'start' }}
+                  >
+                    <img
+                      src={url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </a>
+                );
+              })}
+            </div>
+          )}
+
           {/* Quick info row: price + facilities as chips (exclude generic place-type labels) */}
           {(hasPrice || facilitiesFiltered.length > 0) && (
             <div className="flex flex-wrap items-center gap-2 mb-4">

@@ -36,6 +36,7 @@ interface GooglePlaceResult {
   geometry?: { location?: { lat: number; lng: number } };
   rating?: number;
   user_ratings_total?: number;
+  photos?: Array<{ photo_reference?: string }>;
 }
 
 interface OCMResult {
@@ -237,6 +238,13 @@ async function fetchAllGoogleUK(key: string): Promise<{ rows: SupabaseLocationRo
         for (const r of results) {
           const loc = r.geometry?.location;
           if (!loc) continue;
+          const photoRefs = (r.photos ?? [])
+            .map((p) => p.photo_reference)
+            .filter((ref): ref is string => Boolean(ref))
+            .slice(0, 5);
+          const images = photoRefs.map(
+            (ref) => `/api/place-photo?photo_reference=${encodeURIComponent(ref)}`
+          );
           const row: SupabaseLocationRow = {
             name: r.name || 'Unnamed',
             type: toAppType(type),
@@ -246,7 +254,7 @@ async function fetchAllGoogleUK(key: string): Promise<{ rows: SupabaseLocationRo
             address: r.formatted_address || '',
             price: null,
             facilities: [],
-            images: [],
+            images,
             website: null,
             phone: null,
             google_place_id: r.place_id,
