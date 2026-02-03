@@ -101,15 +101,8 @@ function createUserMarker() {
   });
 }
 
-function MapController({ center, selectedLocation }: { center?: [number, number]; selectedLocation: Location | null }) {
+function MapController({ center }: { center?: [number, number]; selectedLocation: Location | null }) {
   const map = useMap();
-  const prevSelectedRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (selectedLocation && selectedLocation.id !== prevSelectedRef.current) {
-      map.flyTo([selectedLocation.lat, selectedLocation.lng], 14, { duration: 0.8 });
-      prevSelectedRef.current = selectedLocation.id;
-    }
-  }, [selectedLocation, map]);
   useEffect(() => {
     if (center) map.flyTo(center, 12, { duration: 0.8 });
   }, [center, map]);
