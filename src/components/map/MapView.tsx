@@ -136,7 +136,7 @@ function MapController({ center }: { center?: [number, number]; selectedLocation
 function MapZoomControls() {
   const map = useMap();
   return (
-    <div className="absolute bottom-[calc(9rem+env(safe-area-inset-bottom,0px))] right-4 md:bottom-4 z-[1100] flex flex-col gap-1 rounded-xl overflow-hidden shadow-lg border border-neutral-700 bg-neutral-900/95 backdrop-blur-sm">
+    <div className="absolute bottom-[calc(var(--app-promo-banner-height,72px)+6rem+env(safe-area-inset-bottom,0px))] right-4 md:bottom-4 z-[1100] flex flex-col gap-1 rounded-xl overflow-hidden shadow-lg border border-neutral-700 bg-neutral-900/95 backdrop-blur-sm">
       <button
         type="button"
         onClick={() => map.zoomIn()}
@@ -196,7 +196,7 @@ function MapLayerControl({
   ];
 
   return (
-    <div ref={ref} className="absolute bottom-[calc(9rem+env(safe-area-inset-bottom,0px))] left-4 md:bottom-4 z-[1100]">
+    <div ref={ref} className="absolute bottom-[calc(var(--app-promo-banner-height,72px)+6rem+env(safe-area-inset-bottom,0px))] left-4 md:bottom-4 z-[1100]">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
