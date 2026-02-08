@@ -18,7 +18,9 @@ import {
   User as UserIcon,
   ExternalLink,
   Share2,
-  CalendarCheck
+  CalendarCheck,
+  Trash2,
+  Send
 } from 'lucide-react';
 import { cn, formatDate, getLocationTypeColor, getLocationTypeLabel, calculateDistance, formatDistanceMiles, getPriceLevelLabel } from '@/lib/utils';
 import type { OpeningHours } from '@/types';
@@ -27,6 +29,7 @@ interface LocationSheetProps {
   location: Location;
   onClose: () => void;
   reviews: Review[];
+  reviewsLoading?: boolean;
   /** For "Distance: X mi away" */
   userLocation?: [number, number] | null;
   isInRoute?: boolean;
@@ -36,6 +39,9 @@ interface LocationSheetProps {
   onSave?: () => void;
   onUnsave?: () => void;
   onAddToTrip?: () => void;
+  onSubmitReview?: (rating: number, comment: string) => Promise<{ ok: boolean; error?: string }>;
+  onDeleteReview?: (reviewId: string) => Promise<{ ok: boolean; error?: string }>;
+  currentUserId?: string;
 }
 
 const DRAG_CLOSE_THRESHOLD = 100;
@@ -73,8 +79,13 @@ function isOpenNow(hours: OpeningHours): boolean | null {
   return time >= openMins && time <= closeMins;
 }
 
-export default function LocationSheet({ location, onClose, reviews, userLocation, isInRoute, onAddToRoute, onRemoveFromRoute, isSaved, onSave, onUnsave, onAddToTrip }: LocationSheetProps) {
+export default function LocationSheet({ location, onClose, reviews, reviewsLoading, userLocation, isInRoute, onAddToRoute, onRemoveFromRoute, isSaved, onSave, onUnsave, onAddToTrip, onSubmitReview, onDeleteReview, currentUserId }: LocationSheetProps) {
   const [isReviewsOpen, setIsReviewsOpen] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
   const [showAllFacilities, setShowAllFacilities] = useState(false);
   const [isHoursOpen, setIsHoursOpen] = useState(false);
   const handleRef = useRef<HTMLDivElement>(null);
@@ -581,7 +592,7 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
             >
               <div className="flex items-center gap-2 text-white font-semibold">
                 <MessageSquare className="w-5 h-5" />
-                Reviews ({reviews.length})
+                Reviews ({reviewsLoading ? '…' : reviews.length})
               </div>
               <ChevronDown 
                 className={cn(
@@ -624,14 +635,94 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
 
             {isReviewsOpen && (
               <div className="mt-4 space-y-4">
-                {/* Add review button */}
-                <button className="w-full flex items-center justify-center gap-2 p-3 border border-dashed border-neutral-700 rounded-xl text-green-500 hover:border-green-500 hover:bg-green-500/5 transition-colors">
-                  <Camera className="w-4 h-4" />
-                  <span className="text-sm font-medium">Add your review</span>
-                </button>
+                {/* Add review: form or button */}
+                {onSubmitReview && currentUserId ? (
+                  showReviewForm ? (
+                    <div className="p-4 bg-neutral-800/50 rounded-xl space-y-3">
+                      <p className="text-sm font-medium text-white">Your rating</p>
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => setReviewRating(n)}
+                            className="p-1 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                            aria-label={`${n} star${n !== 1 ? 's' : ''}`}
+                          >
+                            <Star
+                              className={cn(
+                                'w-8 h-8 transition-colors',
+                                n <= reviewRating ? 'text-yellow-500 fill-yellow-500' : 'text-neutral-600'
+                              )}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-sm font-medium text-white mt-2">Comment (optional)</p>
+                      <textarea
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        placeholder="Share your experience…"
+                        rows={3}
+                        className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                      />
+                      {reviewError && (
+                        <p className="text-sm text-red-400">{reviewError}</p>
+                      )}
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={reviewSubmitting}
+                          onClick={async () => {
+                            setReviewError(null);
+                            setReviewSubmitting(true);
+                            const result = await onSubmitReview(reviewRating, reviewComment);
+                            setReviewSubmitting(false);
+                            if (result.ok) {
+                              setShowReviewForm(false);
+                              setReviewComment('');
+                              setReviewRating(5);
+                            } else {
+                              setReviewError(result.error ?? 'Failed to submit');
+                            }
+                          }}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-medium rounded-xl"
+                        >
+                          <Send className="w-4 h-4" />
+                          Submit review
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowReviewForm(false);
+                            setReviewError(null);
+                          }}
+                          className="py-2.5 px-4 bg-neutral-700 hover:bg-neutral-600 text-neutral-300 rounded-xl"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowReviewForm(true)}
+                      className="w-full flex items-center justify-center gap-2 p-3 border border-dashed border-neutral-700 rounded-xl text-green-500 hover:border-green-500 hover:bg-green-500/5 transition-colors"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span className="text-sm font-medium">Add your review</span>
+                    </button>
+                  )
+                ) : (
+                  onSubmitReview && !currentUserId && (
+                    <p className="text-center text-neutral-500 text-sm py-2">Sign in to add a review</p>
+                  )
+                )}
 
                 {/* Reviews list */}
-                {reviews.length > 0 ? (
+                {reviewsLoading ? (
+                  <p className="text-center py-6 text-neutral-500 text-sm">Loading reviews…</p>
+                ) : reviews.length > 0 ? (
                   reviews.map((review) => (
                     <div
                       key={review.id}
@@ -643,8 +734,27 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
                             <UserIcon className="w-4 h-4 text-neutral-400" />
                           </div>
                           <span className="text-sm font-medium text-white">{review.user_name}</span>
+                          {currentUserId && review.user_id === currentUserId && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">Your review</span>
+                          )}
                         </div>
-                        <span className="text-xs text-neutral-500">{formatDate(review.created_at)}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-neutral-500">{formatDate(review.created_at)}</span>
+                          {onDeleteReview && currentUserId && review.user_id === currentUserId && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (window.confirm('Delete this review?')) {
+                                  await onDeleteReview(review.id);
+                                }
+                              }}
+                              className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-neutral-700 transition-colors"
+                              aria-label="Delete review"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-1 mb-2">
                         {[...Array(5)].map((_, i) => (
@@ -657,7 +767,7 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
                           />
                         ))}
                       </div>
-                      <p className="text-sm text-neutral-300 leading-relaxed">{review.comment}</p>
+                      <p className="text-sm text-neutral-300 leading-relaxed">{review.comment || 'No comment.'}</p>
                       {review.photos.length > 0 && (
                         <div className="flex gap-2 mt-3 overflow-x-auto">
                           {review.photos.map((photo, i) => (
@@ -674,9 +784,11 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-neutral-500 text-sm">
-                    No reviews yet. Be the first to share your experience!
-                  </div>
+                  !reviewsLoading && (
+                    <div className="text-center py-8 text-neutral-500 text-sm">
+                      No reviews yet. Be the first to share your experience!
+                    </div>
+                  )
                 )}
               </div>
             )}

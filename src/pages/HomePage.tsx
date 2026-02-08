@@ -12,33 +12,11 @@ import { useRouteGeometry } from '@/hooks/useRouteGeometry';
 import { useSavedPlaces } from '@/hooks/useSavedPlaces';
 import { usePlacesInBounds } from '@/hooks/usePlacesInBounds';
 import { type Bounds, DEFAULT_UK_BOUNDS, fetchPlacesByIds, fetchTripById } from '@/services/placesApi';
-import { Location, LocationType, Review } from '@/types';
+import { Location, LocationType } from '@/types';
 import { cn, qualityScore, getTop10PercentIds, getIdsWithFiveOrMorePhotos, normalizeLocationType, calculateDistance } from '@/lib/utils';
 import { Route, Map as MapIcon, List } from 'lucide-react';
-
-// Sample reviews - in production these come from Supabase
-const sampleReviews: Review[] = [
-  {
-    id: '1',
-    location_id: '1',
-    user_id: 'user1',
-    user_name: 'Sarah M.',
-    rating: 5,
-    comment: 'Absolutely stunning location. The facilities were clean and the views incredible. Will definitely be back!',
-    photos: [],
-    created_at: '2024-11-15T10:00:00Z',
-  },
-  {
-    id: '2',
-    location_id: '1',
-    user_id: 'user2',
-    user_name: 'James T.',
-    rating: 4,
-    comment: 'Great campsite, got a bit busy on the weekend but still had a lovely time. Electric hookups worked perfectly.',
-    photos: [],
-    created_at: '2024-11-10T10:00:00Z',
-  },
-];
+import { useAuth } from '@/hooks/useAuth';
+import { useReviewsForLocation } from '@/hooks/useReviewsForLocation';
 
 export default function HomePage() {
   const location = useLocation();
@@ -85,8 +63,10 @@ export default function HomePage() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showRouteEmptyHint]);
+  const { user } = useAuth();
   const { addSaved, removeSaved, isSaved } = useSavedPlaces();
   const { locations: apiLocations } = usePlacesInBounds(bounds);
+  const { reviews: locationReviews, loading: reviewsLoading, submitReview, deleteReview } = useReviewsForLocation(selectedLocation?.id ?? null);
 
   // Open location card when navigating from Saved Places
   useEffect(() => {
@@ -257,12 +237,6 @@ export default function HomePage() {
     ev_charger: baseLocations.filter((l) => normalizeLocationType(l.type ?? '') === 'ev_charger').length,
     rest_stop: baseLocations.filter((l) => normalizeLocationType(l.type ?? '') === 'rest_stop').length,
   }), [baseLocations]);
-
-  // Get reviews for selected location
-  const locationReviews = useMemo(() => {
-    if (!selectedLocation) return [];
-    return sampleReviews.filter((r) => r.location_id === selectedLocation.id);
-  }, [selectedLocation]);
 
   const handleLocationSelect = (lat: number, lng: number, _name: string) => {
     setUserLocation([lat, lng]);
@@ -444,6 +418,7 @@ export default function HomePage() {
           location={selectedLocation}
           onClose={() => setSelectedLocation(null)}
           reviews={locationReviews}
+          reviewsLoading={reviewsLoading}
           userLocation={userLocation}
           isInRoute={isInRoute(selectedLocation)}
           onAddToRoute={() => addToRoute(selectedLocation)}
@@ -452,6 +427,9 @@ export default function HomePage() {
           onSave={() => selectedLocation && addSaved(selectedLocation)}
           onUnsave={() => selectedLocation && removeSaved(selectedLocation.id)}
           onAddToTrip={() => selectedLocation && setAddToTripLocation(selectedLocation)}
+          onSubmitReview={submitReview}
+          onDeleteReview={deleteReview}
+          currentUserId={user?.id}
         />
       )}
 
