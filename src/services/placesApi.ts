@@ -101,9 +101,8 @@ const LOCATIONS_SELECT =
   'id, name, type, lat, lng, description, address, price, facilities, images, website, phone, google_place_id, external_id, external_source, rating, review_count, price_level, opening_hours, created_at, updated_at';
 
 const PAGE_SIZE = 1000;
-const MAX_LOCATIONS_IN_BOUNDS = 5000;
 
-/** Fetch places in bounds directly from Supabase (client). No API call. */
+/** Fetch all places in bounds directly from Supabase (client). No cap — loads entire UK on first view, then visible bounds when zoomed. */
 export async function fetchAllPlacesInBounds(bounds: Bounds): Promise<Location[]> {
   const { sw, ne } = bounds;
   const [cSwLat, cSwLng, cNeLat, cNeLng] = clampBoundsToUK(sw[0], sw[1], ne[0], ne[1]);
@@ -114,7 +113,7 @@ export async function fetchAllPlacesInBounds(bounds: Bounds): Promise<Location[]
     let offset = 0;
     let hasMore = true;
 
-    while (hasMore && allRows.length < MAX_LOCATIONS_IN_BOUNDS) {
+    while (hasMore) {
       const { data: rows, error } = await supabase
         .from('locations')
         .select(LOCATIONS_SELECT)
