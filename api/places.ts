@@ -58,6 +58,31 @@ interface PlacesDbRow {
   updated_at: string;
 }
 
+function rowToLocation(r: PlacesDbRow, now: string) {
+  return {
+    id: r.id || `${r.external_source}-${r.external_id}`,
+    name: r.name ?? '',
+    type: (r.type === 'ev_charger' ? 'ev_charger' : r.type === 'rest_stop' ? 'rest_stop' : 'campsite') as 'campsite' | 'ev_charger' | 'rest_stop',
+    lat: r.lat,
+    lng: r.lng,
+    description: r.description ?? '',
+    address: r.address ?? '',
+    facilities: Array.isArray(r.facilities) ? r.facilities : [],
+    images: Array.isArray(r.images) ? r.images : [],
+    google_place_id: r.google_place_id ?? undefined,
+    ocm_id: r.external_source === 'open_charge_map' ? parseInt(String(r.external_id), 10) : undefined,
+    website: r.website ?? undefined,
+    phone: r.phone ?? undefined,
+    rating: r.rating != null ? Number(r.rating) : undefined,
+    user_ratings_total: r.review_count != null ? Number(r.review_count) : undefined,
+    review_count: r.review_count != null ? Number(r.review_count) : undefined,
+    price_level: r.price_level != null ? Number(r.price_level) : undefined,
+    opening_hours: r.opening_hours ?? undefined,
+    created_at: r.created_at ?? now,
+    updated_at: r.updated_at ?? now,
+  };
+}
+
 /** Map API: ONLY reads from Supabase. All data is synced by api/sync-places (daily or on-demand). */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -66,16 +91,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const q = req.query || {};
-  const swLat = parseFloat(String(q.swLat ?? ''));
-  const swLng = parseFloat(String(q.swLng ?? ''));
-  const neLat = parseFloat(String(q.neLat ?? ''));
-  const neLng = parseFloat(String(q.neLng ?? ''));
-
-  if ([swLat, swLng, neLat, neLng].some(Number.isNaN)) {
-    return res.status(400).json({ error: 'Invalid bounds: swLat, swLng, neLat, neLng required' });
-  }
-
-  const [cSwLat, cSwLng, cNeLat, cNeLng] = clampBoundsToUK(swLat, swLng, neLat, neLng);
+  const idsParam = typeof q.ids === 'string' ? q.ids : undefined;
+  const ids = idsParam ? idsParam.split(',').map((s) => s.trim()).filter(Boolean) : undefined;
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -85,10 +102,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  const PAGE_SIZE = 1000;
+  const now = new Date().toISOString();
 
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    if (ids && ids.length > 0) {
+      const { data: rows, error } = await supabase
+        .from('locations')
+        .select('id, name, type, lat, lng, description, address, price, facilities, images, website, phone, google_place_id, external_id, external_source, rating, review_count, price_level, opening_hours, created_at, updated_at')
+        .in('id', ids.slice(0, 100));
+
+      if (error) {
+        console.error('Supabase places by ids error:', error);
+        return res.status(500).json({ error: error.message, code: error.code });
+      }
+
+      const allRows = (rows ?? []) as unknown as PlacesDbRow[];
+      const locations = allRows
+        .filter((r) => inUK(r.lat, r.lng))
+        .map((r) => rowToLocation(r, now));
+
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+      return res.status(200).json({ locations });
+    }
+
+    const swLat = parseFloat(String(q.swLat ?? ''));
+    const swLng = parseFloat(String(q.swLng ?? ''));
+    const neLat = parseFloat(String(q.neLat ?? ''));
+    const neLng = parseFloat(String(q.neLng ?? ''));
+
+    if ([swLat, swLng, neLat, neLng].some(Number.isNaN)) {
+      return res.status(400).json({ error: 'Invalid bounds: swLat, swLng, neLat, neLng required (or use ids=id1,id2)' });
+    }
+
+    const [cSwLat, cSwLng, cNeLat, cNeLng] = clampBoundsToUK(swLat, swLng, neLat, neLng);
+
+    const PAGE_SIZE = 1000;
     const allRows: PlacesDbRow[] = [];
     let offset = 0;
     let hasMore = true;
@@ -114,31 +165,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       offset += PAGE_SIZE;
     }
 
-    const now = new Date().toISOString();
     const locations = allRows
       .filter((r) => inUK(r.lat, r.lng))
-      .map((r) => ({
-        id: r.id || `${r.external_source}-${r.external_id}`,
-        name: r.name ?? '',
-        type: r.type === 'ev_charger' ? 'ev_charger' : r.type === 'rest_stop' ? 'rest_stop' : 'campsite',
-        lat: r.lat,
-        lng: r.lng,
-        description: r.description ?? '',
-        address: r.address ?? '',
-        facilities: Array.isArray(r.facilities) ? r.facilities : [],
-        images: Array.isArray(r.images) ? r.images : [],
-        google_place_id: r.google_place_id ?? undefined,
-        ocm_id: r.external_source === 'open_charge_map' ? parseInt(String(r.external_id), 10) : undefined,
-        website: r.website ?? undefined,
-        phone: r.phone ?? undefined,
-        rating: r.rating != null ? Number(r.rating) : undefined,
-        user_ratings_total: r.review_count != null ? Number(r.review_count) : undefined,
-        review_count: r.review_count != null ? Number(r.review_count) : undefined,
-        price_level: r.price_level != null ? Number(r.price_level) : undefined,
-        opening_hours: r.opening_hours ?? undefined,
-        created_at: r.created_at ?? now,
-        updated_at: r.updated_at ?? now,
-      }));
+      .map((r) => rowToLocation(r, now));
 
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');

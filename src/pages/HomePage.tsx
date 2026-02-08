@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import MapView, { type BasemapId } from '@/components/map/MapView';
 import LocationListView from '@/components/LocationListView';
 import SearchBar from '@/components/SearchBar';
@@ -7,12 +7,13 @@ import FilterPills from '@/components/FilterPills';
 import LocationSheet from '@/components/LocationSheet';
 import UserMenu from '@/components/UserMenu';
 import RoutePlannerPanel from '@/components/RoutePlannerPanel';
+import AddToTripModal from '@/components/AddToTripModal';
 import { useRouteGeometry } from '@/hooks/useRouteGeometry';
 import { useSavedPlaces } from '@/hooks/useSavedPlaces';
 import { usePlacesInBounds } from '@/hooks/usePlacesInBounds';
-import { type Bounds, DEFAULT_UK_BOUNDS } from '@/services/placesApi';
+import { type Bounds, DEFAULT_UK_BOUNDS, fetchPlacesByIds, fetchTripById } from '@/services/placesApi';
 import { Location, LocationType, Review } from '@/types';
-import { cn, qualityScore, getTop10PercentIds, getIdsWithFiveOrMorePhotos, normalizeLocationType } from '@/lib/utils';
+import { cn, qualityScore, getTop10PercentIds, getIdsWithFiveOrMorePhotos, normalizeLocationType, calculateDistance } from '@/lib/utils';
 import { Route, Map as MapIcon, List } from 'lucide-react';
 
 // Sample reviews - in production these come from Supabase
@@ -42,6 +43,13 @@ const sampleReviews: Review[] = [
 export default function HomePage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { id: placeOrTripId } = useParams<{ id: string }>();
+  const isPlaceRoute = location.pathname.startsWith('/place/');
+  const isTripRoute = location.pathname.startsWith('/trip/');
+  const placeId = isPlaceRoute ? placeOrTripId : undefined;
+  const tripId = isTripRoute ? placeOrTripId : undefined;
+
+  const [addToTripLocation, setAddToTripLocation] = useState<Location | null>(null);
   // Only campsites selected by default; user can enable rest stops and EV chargers via pills
   const [selectedTypes, setSelectedTypes] = useState<Set<LocationType>>(
     () => new Set<LocationType>(['campsite'])
@@ -63,6 +71,7 @@ export default function HomePage() {
   const [showRouteEmptyHint, setShowRouteEmptyHint] = useState(false);
   const [basemap, setBasemap] = useState<BasemapId>('default');
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
+  const [listSortMode, setListSortMode] = useState<'quality' | 'distance'>('quality');
   const routeHintRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState<Bounds | null>(DEFAULT_UK_BOUNDS);
 
@@ -88,6 +97,49 @@ export default function HomePage() {
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.state, location.pathname, navigate]);
+
+  // Load route from TripsPage "Open on map"
+  useEffect(() => {
+    const loadStops = (location.state as { loadRouteStops?: Location[] } | null)?.loadRouteStops;
+    if (loadStops && Array.isArray(loadStops) && loadStops.length > 0) {
+      setRouteStops(loadStops);
+      setRoutePanelOpen(true);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate]);
+
+  // Share link /place/:id — fetch place and show on map
+  useEffect(() => {
+    if (!placeId) return;
+    let cancelled = false;
+    fetchPlacesByIds([placeId]).then((locs) => {
+      if (cancelled || locs.length === 0) return;
+      const loc = locs[0];
+      setSelectedLocation(loc);
+      setMapCenter([loc.lat, loc.lng]);
+      navigate('/', { replace: true });
+    });
+    return () => { cancelled = true; };
+  }, [placeId, navigate]);
+
+  // Share link /trip/:id — fetch trip and places, set route and open panel
+  useEffect(() => {
+    if (!tripId) return;
+    let cancelled = false;
+    fetchTripById(tripId).then((trip) => {
+      if (cancelled || !trip || trip.locationIds.length === 0) {
+        if (!cancelled) navigate('/', { replace: true });
+        return;
+      }
+      return fetchPlacesByIds(trip.locationIds).then((locs) => {
+        if (cancelled) return;
+        setRouteStops(locs);
+        setRoutePanelOpen(true);
+        navigate('/', { replace: true });
+      });
+    });
+    return () => { cancelled = true; };
+  }, [tripId, navigate]);
 
   const addToRoute = useCallback((location: Location) => {
     setRouteStops((prev) =>
@@ -180,10 +232,21 @@ export default function HomePage() {
     return result;
   }, [baseLocations, selectedTypes, searchQuery, spatiallyCapLocations]);
 
-  // List view: same as filtered but sorted by quality (best first)
+  // List view: sorted by quality (best first) or by distance when userLocation set
   const locationsSortedByQuality = useMemo(() => {
     return [...filteredLocations].sort((a, b) => qualityScore(b) - qualityScore(a));
   }, [filteredLocations]);
+
+  const locationsForList = useMemo(() => {
+    if (listSortMode === 'distance' && userLocation) {
+      return [...filteredLocations].sort((a, b) => {
+        const da = calculateDistance(userLocation[0], userLocation[1], a.lat, a.lng);
+        const db = calculateDistance(userLocation[0], userLocation[1], b.lat, b.lng);
+        return da - db;
+      });
+    }
+    return locationsSortedByQuality;
+  }, [filteredLocations, listSortMode, userLocation, locationsSortedByQuality]);
 
   // Gold star: top 10% per category by quality; gold crown: 5+ photos
   const top10PercentIds = useMemo(() => getTop10PercentIds(filteredLocations), [filteredLocations]);
@@ -235,11 +298,40 @@ export default function HomePage() {
         />
       </div>
 
-      {/* List view - sorted by quality */}
+      {/* List view - sort by quality or distance */}
       {viewMode === 'list' && (
         <div className="absolute inset-0 pt-[220px] md:pt-[200px] flex flex-col min-h-0">
+          {userLocation && (
+            <div className="flex-shrink-0 flex items-center justify-end gap-1 px-4 py-2">
+              <span className="text-neutral-500 text-sm mr-1">Sort:</span>
+              <button
+                type="button"
+                onClick={() => setListSortMode('quality')}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                  listSortMode === 'quality'
+                    ? 'bg-green-500/20 text-green-400'
+                    : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+                )}
+              >
+                Quality
+              </button>
+              <button
+                type="button"
+                onClick={() => setListSortMode('distance')}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                  listSortMode === 'distance'
+                    ? 'bg-green-500/20 text-green-400'
+                    : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+                )}
+              >
+                Nearest
+              </button>
+            </div>
+          )}
           <LocationListView
-            locations={locationsSortedByQuality}
+            locations={locationsForList}
             top10PercentIds={top10PercentIds}
             crownIds={crownIds}
             onSelect={setSelectedLocation}
@@ -359,6 +451,15 @@ export default function HomePage() {
           isSaved={selectedLocation ? isSaved(selectedLocation.id) : false}
           onSave={() => selectedLocation && addSaved(selectedLocation)}
           onUnsave={() => selectedLocation && removeSaved(selectedLocation.id)}
+          onAddToTrip={() => selectedLocation && setAddToTripLocation(selectedLocation)}
+        />
+      )}
+
+      {addToTripLocation && (
+        <AddToTripModal
+          location={addToTripLocation}
+          onClose={() => setAddToTripLocation(null)}
+          onAdded={() => setAddToTripLocation(null)}
         />
       )}
 

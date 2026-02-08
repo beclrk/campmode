@@ -6,6 +6,7 @@ import LoginPage from '@/pages/LoginPage';
 import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import SettingsPage from '@/pages/SettingsPage';
 import SavedPlacesPage from '@/pages/SavedPlacesPage';
+import TripsPage from '@/pages/TripsPage';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import TermsPage from '@/pages/TermsPage';
 import { Loader2 } from 'lucide-react';
@@ -55,7 +56,10 @@ function AppRoutes() {
       {/* Protected: require signed-in user */}
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/place/:id" element={<HomePage />} />
+        <Route path="/trip/:id" element={<HomePage />} />
         <Route path="/saved" element={<SavedPlacesPage />} />
+        <Route path="/trips" element={<TripsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
 

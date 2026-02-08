@@ -64,3 +64,13 @@ export interface LocationFilters {
   type: LocationType | 'all';
   searchQuery: string;
 }
+
+// Trip (saved route / collection of places)
+export interface Trip {
+  id: string;
+  name: string;
+  description?: string;
+  locationIds: string[];
+  created_at?: string;
+  updated_at?: string;
+}

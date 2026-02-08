@@ -67,3 +67,44 @@ export async function fetchGooglePlacesInBounds(bounds: Bounds): Promise<Locatio
 export async function fetchAllPlacesInBounds(bounds: Bounds): Promise<Location[]> {
   return fetchGooglePlacesInBounds(bounds);
 }
+
+const apiBase = typeof window !== 'undefined' ? '' : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '';
+
+/** Fetch places by id list (for trip share, trip load). */
+export async function fetchPlacesByIds(ids: string[]): Promise<Location[]> {
+  if (ids.length === 0) return [];
+  const params = new URLSearchParams({ ids: ids.join(',') });
+  const url = `${apiBase}/api/places?${params}`;
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  const data = (await res.json()) as { locations?: Location[] };
+  const raw = data.locations ?? [];
+  return raw.filter(
+    (loc): loc is Location =>
+      loc != null &&
+      typeof loc.id === 'string' &&
+      typeof loc.lat === 'number' &&
+      typeof loc.lng === 'number' &&
+      !Number.isNaN(loc.lat) &&
+      !Number.isNaN(loc.lng)
+  );
+}
+
+export interface TripInfo {
+  id: string;
+  name: string;
+  locationIds: string[];
+}
+
+/** Fetch trip by id (for share link; no auth). */
+export async function fetchTripById(id: string): Promise<TripInfo | null> {
+  const url = `${apiBase}/api/trip?id=${encodeURIComponent(id)}`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = (await res.json()) as { id: string; name: string; locationIds: string[] };
+  return {
+    id: data.id,
+    name: data.name ?? '',
+    locationIds: Array.isArray(data.locationIds) ? data.locationIds : [],
+  };
+}

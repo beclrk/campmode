@@ -16,7 +16,9 @@ import {
   MessageSquare,
   Camera,
   User as UserIcon,
-  ExternalLink
+  ExternalLink,
+  Share2,
+  CalendarCheck
 } from 'lucide-react';
 import { cn, formatDate, getLocationTypeColor, getLocationTypeLabel, calculateDistance, formatDistanceMiles, getPriceLevelLabel } from '@/lib/utils';
 import type { OpeningHours } from '@/types';
@@ -176,9 +178,27 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
 
   const handleWebsite = () => {
     if (location.website) {
-      window.open(location.website, '_blank');
+      const url = location.website.startsWith('http') ? location.website : `https://${location.website}`;
+      window.open(url, '_blank');
     }
   };
+
+  const handleSharePlace = () => {
+    const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/place/${location.id}`;
+    if (navigator.share) {
+      navigator.share({ title: location.name, url }).catch(() => copyUrl(url));
+    } else {
+      copyUrl(url);
+    }
+  };
+
+  function copyUrl(url: string) {
+    navigator.clipboard?.writeText(url).then(() => {
+      if (typeof window !== 'undefined' && window.alert) window.alert('Link copied to clipboard');
+    });
+  }
+
+  const canBook = (location.type === 'campsite' || location.type === 'rest_stop') && location.website;
 
   const handleCall = () => {
     if (location.phone) {
@@ -332,6 +352,29 @@ export default function LocationSheet({ location, onClose, reviews, userLocation
             </div>
             <ExternalLink className="w-4 h-4 text-neutral-500 shrink-0 mt-0.5" />
           </div>
+
+          {/* Book / Check availability - campsites and rest stops with website */}
+          {canBook && (
+            <a
+              href={location.website!.startsWith('http') ? location.website! : `https://${location.website!}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 mb-4 rounded-xl bg-green-600 hover:bg-green-500 text-white font-medium transition-colors"
+            >
+              <CalendarCheck className="w-5 h-5" />
+              {location.type === 'campsite' ? 'Book or check availability' : 'Check availability'}
+            </a>
+          )}
+
+          {/* Share place */}
+          <button
+            type="button"
+            onClick={handleSharePlace}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 mb-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-medium transition-colors"
+          >
+            <Share2 className="w-4 h-4" />
+            Share place
+          </button>
 
           {/* Quick actions: full width row (Open in Google, Call) so visible on web without scrolling */}
           <div className={cn("w-full grid gap-2 mb-4", location.phone ? "grid-cols-2" : "grid-cols-1")}>

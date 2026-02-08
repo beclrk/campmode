@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { LogIn, LogOut, Settings, Heart } from 'lucide-react';
+import { LogIn, LogOut, Settings, Heart, Route } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function UserMenu() {
@@ -85,6 +85,16 @@ export default function UserMenu() {
                 >
                   <Heart className="w-4 h-4" />
                   <span>Saved Places</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    navigate('/trips');
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-neutral-300 hover:bg-neutral-800 transition-colors text-left"
+                >
+                  <Route className="w-4 h-4" />
+                  <span>My Trips</span>
                 </button>
                 <button
                   onClick={() => {

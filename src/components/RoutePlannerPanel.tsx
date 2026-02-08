@@ -12,6 +12,7 @@ import { cn, getLocationTypeLabel } from '@/lib/utils';
 
 const APPLE_MAPS_BASE = 'https://maps.apple.com/?daddr=';
 const GOOGLE_MAPS_BASE = 'https://www.google.com/maps/dir/?api=1&destination=';
+const GOOGLE_MAPS_DIR_BASE = 'https://www.google.com/maps/dir/?api=1';
 
 interface RoutePlannerPanelProps {
   stops: Location[];
@@ -29,6 +30,31 @@ function openInGoogleMaps(lat: number, lng: number) {
   window.open(`${GOOGLE_MAPS_BASE}${lat},${lng}`, '_blank');
 }
 
+/** Open full route in Google Maps: origin, waypoints (pipe-separated), destination. */
+function openFullRouteGoogle(stops: Location[]) {
+  if (stops.length === 0) return;
+  const first = stops[0];
+  const last = stops[stops.length - 1];
+  const waypoints = stops.length > 2 ? stops.slice(1, -1) : [];
+  const origin = `${first.lat},${first.lng}`;
+  const destination = `${last.lat},${last.lng}`;
+  const waypointsStr = waypoints.map((s) => `${s.lat},${s.lng}`).join('|');
+  const params = new URLSearchParams({
+    origin,
+    destination,
+    ...(waypointsStr ? { waypoints: waypointsStr } : {}),
+  });
+  window.open(`${GOOGLE_MAPS_DIR_BASE}&${params.toString()}`, '_blank');
+}
+
+/** Apple Maps does not support waypoints in URL; open first stop to last stop only. */
+function openFullRouteApple(stops: Location[]) {
+  if (stops.length === 0) return;
+  const first = stops[0];
+  const last = stops[stops.length - 1];
+  window.open(`https://maps.apple.com/?saddr=${first.lat},${first.lng}&daddr=${last.lat},${last.lng}`, '_blank');
+}
+
 export default function RoutePlannerPanel({
   stops,
   onClose,
@@ -37,6 +63,7 @@ export default function RoutePlannerPanel({
   onSelectStop,
 }: RoutePlannerPanelProps) {
   const [showMapsPicker, setShowMapsPicker] = useState(false);
+  const [showFullRoutePicker, setShowFullRoutePicker] = useState(false);
   const nextStop = stops[0];
 
   const handleOpenInMaps = (app: 'apple' | 'google') => {
@@ -44,6 +71,12 @@ export default function RoutePlannerPanel({
     setShowMapsPicker(false);
     if (app === 'apple') openInAppleMaps(nextStop.lat, nextStop.lng);
     else openInGoogleMaps(nextStop.lat, nextStop.lng);
+  };
+
+  const handleOpenFullRoute = (app: 'apple' | 'google') => {
+    setShowFullRoutePicker(false);
+    if (app === 'apple') openFullRouteApple(stops);
+    else openFullRouteGoogle(stops);
   };
 
   if (stops.length === 0) return null;
@@ -114,6 +147,53 @@ export default function RoutePlannerPanel({
             )}
             <p className="text-neutral-500 text-xs mt-2">
               Opens your chosen app with this stop. The full route stays here.
+            </p>
+          </div>
+        )}
+
+        {/* Open full route in Maps (all stops) */}
+        {stops.length >= 2 && (
+          <div className="flex-shrink-0 px-4 py-3 border-b border-neutral-800">
+            <p className="text-neutral-400 text-sm mb-2">Open full route (all {stops.length} stops)</p>
+            {!showFullRoutePicker ? (
+              <button
+                type="button"
+                onClick={() => setShowFullRoutePicker(true)}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-neutral-700 hover:bg-neutral-600 text-white font-medium rounded-xl transition-colors"
+              >
+                <Route className="w-5 h-5" />
+                Open full route in Maps
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleOpenFullRoute('google')}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-neutral-800 hover:bg-neutral-700 text-white font-medium rounded-xl transition-colors"
+                >
+                  Google Maps
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenFullRoute('apple')}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-neutral-800 hover:bg-neutral-700 text-white font-medium rounded-xl transition-colors"
+                >
+                  Apple Maps
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowFullRoutePicker(false)}
+                  className="p-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-400 transition-colors"
+                  aria-label="Back"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+            <p className="text-neutral-500 text-xs mt-2">
+              {stops.length >= 2
+                ? 'Google: all waypoints. Apple: first to last stop only.'
+                : ''}
             </p>
           </div>
         )}
