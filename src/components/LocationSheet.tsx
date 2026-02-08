@@ -80,7 +80,6 @@ function isOpenNow(hours: OpeningHours): boolean | null {
 }
 
 export default function LocationSheet({ location, onClose, reviews, reviewsLoading, userLocation, isInRoute, onAddToRoute, onRemoveFromRoute, isSaved, onSave, onUnsave, onAddToTrip, onSubmitReview, onDeleteReview, currentUserId }: LocationSheetProps) {
-  const [isReviewsOpen, setIsReviewsOpen] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
@@ -584,26 +583,15 @@ export default function LocationSheet({ location, onClose, reviews, reviewsLoadi
             </button>
           </div>
 
-          {/* Reviews section */}
+          {/* Reviews section - always visible */}
           <div className="border-t border-neutral-800 pt-5">
-            <button
-              onClick={() => setIsReviewsOpen(!isReviewsOpen)}
-              className="w-full flex items-center justify-between"
-            >
-              <div className="flex items-center gap-2 text-white font-semibold">
-                <MessageSquare className="w-5 h-5" />
-                Reviews ({reviewsLoading ? '…' : reviews.length})
-              </div>
-              <ChevronDown 
-                className={cn(
-                  "w-5 h-5 text-neutral-400 transition-transform",
-                  isReviewsOpen && "rotate-180"
-                )} 
-              />
-            </button>
+            <div className="flex items-center gap-2 text-white font-semibold mb-3">
+              <MessageSquare className="w-5 h-5" />
+              Reviews ({reviewsLoading ? '…' : reviews.length})
+            </div>
 
-            {/* View Google Reviews / Open Charge Map - always visible below dropdown header */}
-            <div className="mt-3 flex flex-col gap-2">
+            {/* View Google Reviews / Open Charge Map */}
+            <div className="flex flex-col gap-2">
               {location.google_place_id && (
                 <a
                   href={`https://www.google.com/maps/place/?q=place_id:${location.google_place_id}`}
@@ -633,9 +621,8 @@ export default function LocationSheet({ location, onClose, reviews, reviewsLoadi
               )}
             </div>
 
-            {isReviewsOpen && (
-              <div className="mt-4 space-y-4">
-                {/* Add review: form or button */}
+            <div className="mt-4 space-y-4">
+              {/* Add review: form or button */}
                 {onSubmitReview && currentUserId ? (
                   showReviewForm ? (
                     <div className="p-4 bg-neutral-800/50 rounded-xl space-y-3">
@@ -790,8 +777,7 @@ export default function LocationSheet({ location, onClose, reviews, reviewsLoadi
                     </div>
                   )
                 )}
-              </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
