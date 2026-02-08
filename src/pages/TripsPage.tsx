@@ -16,7 +16,7 @@ function TypeIcon({ type }: { type: Location['type'] }) {
 
 export default function TripsPage() {
   const navigate = useNavigate();
-  const { trips, loading, createTrip, deleteTrip, refetch } = useTrips();
+  const { trips, loading, createTrip, deleteTrip } = useTrips();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -38,7 +38,7 @@ export default function TripsPage() {
     setCreating(false);
   };
 
-  const handleOpenOnMap = async (tripId: string, locationIds: string[]) => {
+  const handleOpenOnMap = async (_tripId: string, locationIds: string[]) => {
     if (locationIds.length === 0) return;
     const locs = await fetchPlacesByIds(locationIds);
     navigate('/', { state: { loadRouteStops: locs }, replace: false });
