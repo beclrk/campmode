@@ -42,9 +42,9 @@ const sampleReviews: Review[] = [
 export default function HomePage() {
   const location = useLocation();
   const navigate = useNavigate();
-  // All three types selected by default; clicking a pill deselects that type (hides from map)
+  // Only campsites selected by default; user can enable rest stops and EV chargers via pills
   const [selectedTypes, setSelectedTypes] = useState<Set<LocationType>>(
-    () => new Set<LocationType>(['campsite', 'rest_stop', 'ev_charger'])
+    () => new Set<LocationType>(['campsite'])
   );
   const toggleType = useCallback((type: LocationType) => {
     setSelectedTypes((prev) => {
@@ -231,6 +231,7 @@ export default function HomePage() {
           osApiKey={import.meta.env.VITE_OS_API_KEY}
           top10PercentIds={top10PercentIds}
           crownIds={crownIds}
+          locationSheetOpen={!!selectedLocation}
         />
       </div>
 
@@ -306,7 +307,7 @@ export default function HomePage() {
             <UserMenu />
           </div>
 
-          {/* Filter pills: Campsites, Rest Stops, EV Chargers — all selected by default; click to deselect (hide from map) */}
+          {/* Filter pills: only campsites on by load; tap to add Rest Stops and/or EV Chargers */}
           <FilterPills
             selectedTypes={selectedTypes}
             onToggleType={toggleType}

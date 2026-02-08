@@ -26,6 +26,8 @@ interface MapViewProps {
   top10PercentIds?: Set<string>;
   /** Location ids with 5+ photos — show gold crown badge. */
   crownIds?: Set<string>;
+  /** When true, zoom and layer controls are hidden on mobile (e.g. when location sheet is open). */
+  locationSheetOpen?: boolean;
 }
 
 interface ClusterPoint {
@@ -133,10 +135,10 @@ function MapController({ center }: { center?: [number, number]; selectedLocation
   return null;
 }
 
-function MapZoomControls() {
+function MapZoomControls({ hideOnMobileWhenSheetOpen }: { hideOnMobileWhenSheetOpen?: boolean }) {
   const map = useMap();
   return (
-    <div className="absolute bottom-[calc(var(--app-promo-banner-height,72px)+8rem+env(safe-area-inset-bottom,0px))] right-4 md:bottom-4 z-[1100] flex flex-col gap-1 rounded-xl overflow-hidden shadow-lg border border-neutral-700 bg-neutral-900/95 backdrop-blur-sm">
+    <div className={`absolute bottom-[calc(var(--app-promo-banner-height,72px)+8rem+env(safe-area-inset-bottom,0px))] right-4 md:bottom-4 z-[1100] flex flex-col gap-1 rounded-xl overflow-hidden shadow-lg border border-neutral-700 bg-neutral-900/95 backdrop-blur-sm ${hideOnMobileWhenSheetOpen ? 'max-md:hidden' : ''}`}>
       <button
         type="button"
         onClick={() => map.zoomIn()}
@@ -172,10 +174,12 @@ function MapLayerControl({
   basemap,
   onBasemapChange,
   osApiKey,
+  hideOnMobileWhenSheetOpen,
 }: {
   basemap: BasemapId;
   onBasemapChange?: (basemap: BasemapId) => void;
   osApiKey?: string;
+  hideOnMobileWhenSheetOpen?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
@@ -196,7 +200,7 @@ function MapLayerControl({
   ];
 
   return (
-    <div ref={ref} className="absolute bottom-[calc(var(--app-promo-banner-height,72px)+8rem+env(safe-area-inset-bottom,0px))] left-4 md:bottom-4 z-[1100]">
+    <div ref={ref} className={`absolute bottom-[calc(var(--app-promo-banner-height,72px)+8rem+env(safe-area-inset-bottom,0px))] left-4 md:bottom-4 z-[1100] ${hideOnMobileWhenSheetOpen ? 'max-md:hidden' : ''}`}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -437,6 +441,7 @@ export default function MapView({
   osApiKey,
   top10PercentIds,
   crownIds,
+  locationSheetOpen = false,
 }: MapViewProps) {
   const defaultCenter: [number, number] = [54.5, -3.5];
   const defaultZoom = 6;
@@ -467,8 +472,8 @@ export default function MapView({
         />
       )}
       <MapController center={center} selectedLocation={selectedLocation} />
-      <MapZoomControls />
-      <MapLayerControl basemap={basemap} onBasemapChange={onBasemapChange} osApiKey={osApiKey} />
+      <MapZoomControls hideOnMobileWhenSheetOpen={locationSheetOpen} />
+      <MapLayerControl basemap={basemap} onBasemapChange={onBasemapChange} osApiKey={osApiKey} hideOnMobileWhenSheetOpen={locationSheetOpen} />
       {onBoundsChange && <BoundsReporter onBoundsChange={onBoundsChange} onZoomChange={onZoomChange} />}
       {routePositions && routePositions.length >= 2 && (
         <Polyline
