@@ -224,10 +224,10 @@ export default function LocationSheet({ location, onClose, reviews, reviewsLoadi
         onClick={onClose}
       />
       
-      {/* Sheet - full height to bottom so no gap; content scrolls inside */}
+      {/* Sheet - full height on mobile; on web sit slightly lower so map peeks at top */}
       <div
         ref={sheetRef}
-        className="relative flex flex-col bg-neutral-900 rounded-t-3xl h-[100dvh] max-h-[100dvh] overflow-hidden animate-in slide-in-from-bottom duration-300"
+        className="relative flex flex-col bg-neutral-900 rounded-t-3xl h-[100dvh] max-h-[100dvh] md:max-h-[88vh] md:h-[88vh] overflow-hidden animate-in slide-in-from-bottom duration-300"
       >
         {/* Handle - drag down to dismiss */}
         <div
