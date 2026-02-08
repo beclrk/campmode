@@ -4,7 +4,7 @@
  * Requires: Supabase RLS allows SELECT on locations (e.g. public or anon). For trip share links,
  * RLS on trips must allow SELECT by id (e.g. policy for anon or any user).
  */
-import { Location } from '@/types';
+import { Location, type OpeningHours } from '@/types';
 import { supabase } from '@/lib/supabase';
 
 export interface Bounds {
@@ -88,7 +88,7 @@ function rowToLocation(r: PlacesDbRow, now: string): Location {
     user_ratings_total: r.review_count != null ? Number(r.review_count) : undefined,
     review_count: r.review_count != null ? Number(r.review_count) : undefined,
     price_level: r.price_level != null ? Number(r.price_level) : undefined,
-    opening_hours: r.opening_hours ?? undefined,
+    opening_hours: (r.opening_hours ?? undefined) as OpeningHours | undefined,
     created_at: r.created_at ?? now,
     updated_at: r.updated_at ?? now,
   };
