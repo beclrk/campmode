@@ -2,6 +2,8 @@
 
 **Sync runs only via the Vercel API route** `GET /api/sync-places`. That route fetches campsites, rest stops, and EV chargers from Google Places and Open Charge Map and upserts them into your Supabase `locations` table.
 
+**Reads:** The app reads locations and trips **directly from Supabase** (client, anon key). It does not call `/api/places` or `/api/trip` for normal use. The API is reserved for sync/updates. Ensure the `locations` table is readable by the client (if RLS is enabled on `locations`, add a policy that allows `SELECT`). For trip share links to work for anyone, add a policy on `trips` that allows `SELECT` by id (e.g. for anon or any user).
+
 - **Images are stored only as proxy URLs:** `/api/place-photo?photo_reference=REFERENCE` — never raw Google URLs or API keys.
 - If you were using a Supabase Edge Function for sync, point your cron to the Vercel URL instead (or use the forwarding Edge Function in `supabase/functions/sync-places` so the real sync still runs on Vercel).
 
