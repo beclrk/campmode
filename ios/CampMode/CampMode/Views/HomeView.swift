@@ -91,6 +91,12 @@ struct HomeView: View {
             TripsView(mapVM: mapVM, onDismiss: { showTrips = false })
         }
         .task { await mapVM.loadLocations() }
+        .onChange(of: mapVM.mapRegion) { _, _ in
+            if !mapVM.searchQuery.isEmpty {
+                mapVM.searchQuery = ""
+                searchText = ""
+            }
+        }
     }
     
     // MARK: - Map Layer

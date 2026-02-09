@@ -283,7 +283,10 @@ export default function HomePage() {
           center={mapCenter}
           userLocation={userLocation}
           routePositions={routePositions}
-          onBoundsChange={setBounds}
+          onBoundsChange={(bounds) => {
+            setBounds(bounds);
+            setSearchQuery('');
+          }}
           basemap={basemap}
           onBasemapChange={setBasemap}
           osApiKey={import.meta.env.VITE_OS_API_KEY}
