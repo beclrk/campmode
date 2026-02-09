@@ -251,6 +251,27 @@ export default function HomePage() {
     setSearchQuery('');
   };
 
+  /** When user clicks "Nearest" and location isn't set yet, request location first then sort by distance. */
+  const handleSortByNearest = () => {
+    if (userLocation) {
+      setListSortMode('distance');
+      return;
+    }
+    if (!navigator.geolocation) {
+      setListSortMode('distance');
+      return;
+    }
+    setListSortMode('distance');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coords: [number, number] = [position.coords.latitude, position.coords.longitude];
+        setUserLocation(coords);
+        setMapCenter(coords);
+      },
+      () => { /* leave listSortMode as distance; list will show quality until they grant location */ }
+    );
+  };
+
   return (
     <div className="relative w-full h-screen overflow-hidden">
       {/* Map - always mounted so zoom/position persist when switching back from list view */}
@@ -272,38 +293,36 @@ export default function HomePage() {
         />
       </div>
 
-      {/* List view - sort by quality or distance */}
+      {/* List view - sort by quality or distance (always visible; default quality; Nearest requests location then sorts) */}
       {viewMode === 'list' && (
         <div className="absolute inset-0 pt-[220px] md:pt-[200px] flex flex-col min-h-0">
-          {userLocation && (
-            <div className="flex-shrink-0 flex items-center justify-end gap-1 px-4 py-2">
-              <span className="text-neutral-500 text-sm mr-1">Sort:</span>
-              <button
-                type="button"
-                onClick={() => setListSortMode('quality')}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-                  listSortMode === 'quality'
-                    ? 'bg-green-500/20 text-green-400'
-                    : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-                )}
-              >
-                Quality
-              </button>
-              <button
-                type="button"
-                onClick={() => setListSortMode('distance')}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-                  listSortMode === 'distance'
-                    ? 'bg-green-500/20 text-green-400'
-                    : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-                )}
-              >
-                Nearest
-              </button>
-            </div>
-          )}
+          <div className="flex-shrink-0 flex items-center justify-end gap-1 px-4 py-2">
+            <span className="text-neutral-500 text-sm mr-1">Sort:</span>
+            <button
+              type="button"
+              onClick={() => setListSortMode('quality')}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                listSortMode === 'quality'
+                  ? 'bg-green-500/20 text-green-400'
+                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+              )}
+            >
+              Quality
+            </button>
+            <button
+              type="button"
+              onClick={handleSortByNearest}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                listSortMode === 'distance'
+                  ? 'bg-green-500/20 text-green-400'
+                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+              )}
+            >
+              Nearest
+            </button>
+          </div>
           <LocationListView
             locations={locationsForList}
             top10PercentIds={top10PercentIds}

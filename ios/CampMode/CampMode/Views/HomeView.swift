@@ -112,17 +112,22 @@ struct HomeView: View {
         VStack(spacing: 0) {
             Spacer().frame(height: 200) // space for top controls
             
-            if effectiveUserLocation != nil {
-                HStack {
-                    Spacer()
-                    Picker("Sort", selection: $mapVM.listSortMode) {
-                        Text("Quality").tag(MapViewModel.SortMode.quality)
-                        Text("Nearest").tag(MapViewModel.SortMode.distance)
+            // Sort always visible; default quality; when user picks Nearest without location, request location first
+            HStack {
+                Spacer()
+                Picker("Sort", selection: $mapVM.listSortMode) {
+                    Text("Quality").tag(MapViewModel.SortMode.quality)
+                    Text("Nearest").tag(MapViewModel.SortMode.distance)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 200)
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .onChange(of: mapVM.listSortMode) { _, newValue in
+                    if newValue == .distance && effectiveUserLocation == nil {
+                        locationManager.requestPermission()
+                        locationManager.requestLocation()
                     }
-                    .pickerStyle(.segmented)
-                    .frame(width: 200)
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
                 }
             }
             
