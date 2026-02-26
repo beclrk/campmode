@@ -1,0 +1,786 @@
+import { useState, useRef, useEffect } from 'react';
+import { Location, Review } from '@/types';
+import { 
+  X, 
+  MapPin, 
+  Star, 
+  Globe, 
+  Phone, 
+  Navigation, 
+  Route,
+  Heart,
+  ChevronDown,
+  Tent,
+  Zap,
+  Coffee,
+  MessageSquare,
+  Camera,
+  User as UserIcon,
+  ExternalLink,
+  Share2,
+  CalendarCheck,
+  Trash2,
+  Send
+} from 'lucide-react';
+import { cn, formatDate, getLocationTypeColor, getLocationTypeLabel, calculateDistance, formatDistanceMiles, getPriceLevelLabel } from '@/lib/utils';
+import type { OpeningHours } from '@/types';
+
+interface LocationSheetProps {
+  location: Location;
+  onClose: () => void;
+  reviews: Review[];
+  reviewsLoading?: boolean;
+  /** For "Distance: X mi away" */
+  userLocation?: [number, number] | null;
+  isInRoute?: boolean;
+  onAddToRoute?: () => void;
+  onRemoveFromRoute?: () => void;
+  isSaved?: boolean;
+  onSave?: () => void;
+  onUnsave?: () => void;
+  onAddToTrip?: () => void;
+  onSubmitReview?: (rating: number, comment: string) => Promise<{ ok: boolean; error?: string }>;
+  onDeleteReview?: (reviewId: string) => Promise<{ ok: boolean; error?: string }>;
+  currentUserId?: string;
+}
+
+const DRAG_CLOSE_THRESHOLD = 100;
+
+function formatOpeningHours(hours: OpeningHours): string[] {
+  if (!hours) return [];
+  if (typeof hours === 'string') return [hours];
+  if (!Array.isArray(hours)) return [];
+  return hours.map((h) => {
+    if (typeof h === 'object' && h != null && typeof (h as { hours?: string }).hours === 'string') return (h as { hours: string }).hours;
+    if (typeof h === 'object' && h != null) {
+      const o = (h as { open?: unknown; close?: unknown }).open;
+      const c = (h as { open?: unknown; close?: unknown }).close;
+      if (typeof o === 'string' && typeof c === 'string') return `${o}-${c}`;
+    }
+    return '';
+  }).filter(Boolean);
+}
+
+function isOpenNow(hours: OpeningHours): boolean | null {
+  if (!hours || typeof hours !== 'object' || !Array.isArray(hours)) return null;
+  const now = new Date();
+  const day = now.getDay();
+  const time = now.getHours() * 60 + now.getMinutes();
+  const today = hours.find((h) => typeof h === 'object' && h != null && (h as { day?: number }).day === day);
+  if (!today || typeof today !== 'object') return null;
+  const openStr = (today as { open?: unknown }).open;
+  const closeStr = (today as { close?: unknown }).close;
+  if (typeof openStr !== 'string' || typeof closeStr !== 'string') return null;
+  const [openH, openM] = [parseInt(openStr.slice(0, 2), 10), parseInt(openStr.slice(2), 10)];
+  const [closeH, closeM] = [parseInt(closeStr.slice(0, 2), 10), parseInt(closeStr.slice(2), 10)];
+  if (Number.isNaN(openH) || Number.isNaN(openM) || Number.isNaN(closeH) || Number.isNaN(closeM)) return null;
+  const openMins = openH * 60 + openM;
+  const closeMins = closeH * 60 + closeM;
+  return time >= openMins && time <= closeMins;
+}
+
+export default function LocationSheet({ location, onClose, reviews, reviewsLoading, userLocation, isInRoute, onAddToRoute, onRemoveFromRoute, isSaved, onSave, onUnsave, onAddToTrip, onSubmitReview, onDeleteReview, currentUserId }: LocationSheetProps) {
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [showAllFacilities, setShowAllFacilities] = useState(false);
+  const [isHoursOpen, setIsHoursOpen] = useState(false);
+  const handleRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const dragStartY = useRef(0);
+  const currentOffsetRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
+
+  const typeColor = getLocationTypeColor(location.type ?? '');
+  const isAppType = location.type === 'campsite' || location.type === 'ev_charger' || location.type === 'rest_stop';
+  const facilities = Array.isArray(location.facilities) ? location.facilities : [];
+  const genericFacilityLabels = ['point_of_interest', 'point of interest', 'establishment', 'premise', 'subpremise'];
+  const facilitiesFiltered = facilities.filter((f) => {
+    const lower = (f ?? '').toString().toLowerCase().trim();
+    return lower && !genericFacilityLabels.some((g) => lower === g.toLowerCase() || lower.replace(/_/g, ' ') === g.toLowerCase());
+  });
+
+  useEffect(() => {
+    const handleEl = handleRef.current;
+    const sheetEl = sheetRef.current;
+    if (!handleEl || !sheetEl) return;
+
+    const onMove = (e: PointerEvent) => {
+      e.preventDefault();
+      const dy = Math.max(0, e.clientY - dragStartY.current);
+      currentOffsetRef.current = dy;
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        sheetEl.style.transition = 'none';
+        sheetEl.style.transform = `translateY(${dy}px)`;
+        rafRef.current = null;
+      });
+    };
+
+    const onUp = (e: PointerEvent) => {
+      try { handleEl.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+      document.removeEventListener('pointermove', onMove, true);
+      document.removeEventListener('pointerup', boundUp, true);
+      document.removeEventListener('pointercancel', boundUp, true);
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      const offset = currentOffsetRef.current;
+      if (offset >= DRAG_CLOSE_THRESHOLD) {
+        onClose();
+        sheetEl.style.transition = '';
+        sheetEl.style.transform = '';
+        return;
+      }
+      sheetEl.style.transition = 'transform 0.25s ease-out';
+      sheetEl.style.transform = 'translateY(0)';
+      const onTransitionEnd = () => {
+        sheetEl.removeEventListener('transitionend', onTransitionEnd);
+        sheetEl.style.transition = '';
+      };
+      sheetEl.addEventListener('transitionend', onTransitionEnd);
+    };
+    const boundUp = (e: PointerEvent) => onUp(e);
+
+    const onDown = (e: PointerEvent) => {
+      dragStartY.current = e.clientY;
+      currentOffsetRef.current = 0;
+      try { handleEl.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+      document.addEventListener('pointermove', onMove, { capture: true, passive: false });
+      document.addEventListener('pointerup', boundUp, true);
+      document.addEventListener('pointercancel', boundUp, true);
+    };
+
+    handleEl.addEventListener('pointerdown', onDown);
+    return () => {
+      handleEl.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('pointermove', onMove, true);
+      document.removeEventListener('pointerup', boundUp, true);
+      document.removeEventListener('pointercancel', boundUp, true);
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [onClose]);
+  const TypeIcon = location.type === 'campsite' ? Tent : location.type === 'ev_charger' ? Zap : Coffee;
+  const visibleFacilitiesRaw = showAllFacilities ? facilitiesFiltered : facilitiesFiltered.slice(0, 6);
+  const visibleFacilities = visibleFacilitiesRaw;
+  const reviewCount = location.review_count ?? location.user_ratings_total ?? reviews.length;
+  const distanceM = userLocation ? calculateDistance(userLocation[0], userLocation[1], location.lat, location.lng) : null;
+  const openingHoursLines = formatOpeningHours(location.opening_hours ?? null);
+  const openNow = isOpenNow(location.opening_hours ?? null);
+  const priceLabel = getPriceLevelLabel(location.price_level, location.price);
+  const hasPrice = Boolean(priceLabel || location.price);
+  const pricePerNightSuffix = location.type === 'campsite' && hasPrice ? ' per night' : '';
+
+  const handleNavigate = () => {
+    window.open(
+      `https://www.google.com/maps/dir/?api=1&destination=${location.lat},${location.lng}`,
+      '_blank'
+    );
+  };
+
+  const handleOpenInGoogle = () => {
+    const query = [location.name, location.address].filter(Boolean).join(' ') || `${location.lat},${location.lng}`;
+    window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+  };
+
+  const handleWebsite = () => {
+    if (location.website) {
+      const url = location.website.startsWith('http') ? location.website : `https://${location.website}`;
+      window.open(url, '_blank');
+    }
+  };
+
+  const handleSharePlace = () => {
+    const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/place/${location.id}`;
+    if (navigator.share) {
+      navigator.share({ title: location.name, url }).catch(() => copyUrl(url));
+    } else {
+      copyUrl(url);
+    }
+  };
+
+  function copyUrl(url: string) {
+    navigator.clipboard?.writeText(url).then(() => {
+      if (typeof window !== 'undefined' && window.alert) window.alert('Link copied to clipboard');
+    });
+  }
+
+  const canBook = (location.type === 'campsite' || location.type === 'rest_stop') && location.website;
+
+  const handleCall = () => {
+    if (location.phone) {
+      window.open(`tel:${location.phone}`, '_self');
+    }
+  };
+
+  return (
+    <div className="absolute bottom-0 left-0 right-0 z-[1000] location-sheet-wrapper location-sheet-full-bottom">
+      {/* Backdrop - above map panes (Leaflet uses 200-700) */}
+      <div 
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Sheet - full height on mobile; on web sit slightly lower so map peeks at top */}
+      <div
+        ref={sheetRef}
+        className="relative flex flex-col bg-neutral-900 rounded-t-3xl h-[100dvh] max-h-[100dvh] md:max-h-[88vh] md:h-[88vh] overflow-hidden animate-in slide-in-from-bottom duration-300"
+      >
+        {/* Handle - drag down to dismiss */}
+        <div
+          ref={handleRef}
+          role="button"
+          tabIndex={0}
+          className="flex-shrink-0 flex justify-center pt-3 pb-2 touch-none cursor-grab active:cursor-grabbing select-none"
+          style={{ touchAction: 'none' }}
+          aria-label="Drag down to close"
+        >
+          <div className="w-10 h-1 bg-neutral-700 rounded-full" />
+        </div>
+
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center hover:bg-neutral-700 transition-colors z-10"
+          aria-label="Close"
+        >
+          <X className="w-4 h-4 text-neutral-400" />
+        </button>
+
+        {/* Content - flex-1 min-h-0 gives definite height so swipe-to-scroll works on mobile */}
+        <div className="flex-1 min-h-0 px-5 location-sheet-scroll-bottom hide-scrollbar sheet-scroll">
+          {/* Header: icon, type badge, name, rating, distance, price */}
+          <div className="flex items-start gap-4 mb-4">
+            <div 
+              className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+              style={{ backgroundColor: `${typeColor}20` }}
+            >
+              <TypeIcon className="w-7 h-7" style={{ color: typeColor }} />
+            </div>
+            <div className="flex-1 min-w-0 pr-8">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                {isAppType && (
+                  <span 
+                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                    style={{ backgroundColor: `${typeColor}20`, color: typeColor }}
+                  >
+                    {getLocationTypeLabel(location.type ?? '')}
+                  </span>
+                )}
+                {location.rating != null && (
+                  <span className="inline-flex items-center gap-1 text-sm">
+                    <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                    <span className="text-white font-medium">{Number(location.rating).toFixed(1)}</span>
+                    {reviewCount > 0 && (
+                      <span className="text-neutral-500">({reviewCount})</span>
+                    )}
+                  </span>
+                )}
+              </div>
+              <h2 className="text-xl font-bold text-white truncate">{location.name}</h2>
+              {(distanceM != null || priceLabel) && (
+                <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-neutral-400">
+                  {distanceM != null && (
+                    <span>Distance: {formatDistanceMiles(distanceM)} away</span>
+                  )}
+                  {(priceLabel || location.price) && (
+                    <span className="text-green-500 font-medium">
+                      {priceLabel || location.price}{pricePerNightSuffix}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Photos from Google (when available) */}
+          {location.images && location.images.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-5 px-5 mb-4" style={{ scrollSnapType: 'x mandatory' }}>
+              {location.images.map((src, i) => {
+                const url = src.startsWith('http') ? src : `${typeof window !== 'undefined' ? window.location.origin : ''}${src}`;
+                return (
+                  <a
+                    key={i}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-shrink-0 w-64 h-40 rounded-xl overflow-hidden bg-neutral-800"
+                    style={{ scrollSnapAlign: 'start' }}
+                  >
+                    <img
+                      src={url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </a>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Quick info row: price + facilities as chips (exclude generic place-type labels) */}
+          {(hasPrice || facilitiesFiltered.length > 0) && (
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              {hasPrice && (
+                <span className="px-2.5 py-1 rounded-lg bg-neutral-800 text-neutral-300 text-sm font-medium">
+                  {priceLabel === 'Free' ? '💷 Free' : `💷 ${priceLabel || location.price}${pricePerNightSuffix}`}
+                </span>
+              )}
+              {facilitiesFiltered.slice(0, 4).map((f, i) => (
+                <span key={i} className="px-2.5 py-1 rounded-lg bg-neutral-800 text-neutral-300 text-sm">
+                  {f ?? ''}
+                </span>
+              ))}
+              {facilitiesFiltered.length > 4 && (
+                <span className="px-2.5 py-1 rounded-lg bg-neutral-800 text-neutral-400 text-sm">
+                  +{facilitiesFiltered.length - 4}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Address - clickable to open in maps (above Open in Google) */}
+          <div 
+            className="flex items-start gap-3 mb-4 p-3 bg-neutral-800/50 rounded-xl"
+            role="button"
+            tabIndex={0}
+            onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.address || `${location.lat},${location.lng}`)}`, '_blank')}
+            onKeyDown={(e) => e.key === 'Enter' && (window as Window & { open: (u: string) => void }).open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.address || `${location.lat},${location.lng}`)}`, '_blank')}
+          >
+            <MapPin className="w-5 h-5 text-neutral-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-neutral-300 text-sm">{location.address || 'Address not listed'}</p>
+              {location.price && location.price !== priceLabel && (
+                <p className="text-green-500 font-semibold mt-1">
+                  {location.price}{location.type === 'campsite' ? ' per night' : ''}
+                </p>
+              )}
+            </div>
+            <ExternalLink className="w-4 h-4 text-neutral-500 shrink-0 mt-0.5" />
+          </div>
+
+          {/* Book / Check availability - campsites and rest stops with website */}
+          {canBook && (
+            <a
+              href={location.website!.startsWith('http') ? location.website! : `https://${location.website!}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 mb-4 rounded-xl bg-green-600 hover:bg-green-500 text-white font-medium transition-colors"
+            >
+              <CalendarCheck className="w-5 h-5" />
+              {location.type === 'campsite' ? 'Book or check availability' : 'Check availability'}
+            </a>
+          )}
+
+          {/* Share place */}
+          <button
+            type="button"
+            onClick={handleSharePlace}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 mb-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-medium transition-colors"
+          >
+            <Share2 className="w-4 h-4" />
+            Share place
+          </button>
+
+          {/* Quick actions: full width row (Open in Google, Call) so visible on web without scrolling */}
+          <div className={cn("w-full grid gap-2 mb-4", location.phone ? "grid-cols-2" : "grid-cols-1")}>
+            <button
+              type="button"
+              onClick={handleOpenInGoogle}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-medium transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Open in Google
+            </button>
+            {location.phone && (
+              <a
+                href={`tel:${String(location.phone).replace(/\s/g, '')}`}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-medium transition-colors"
+              >
+                <Phone className="w-4 h-4" />
+                Call
+              </a>
+            )}
+          </div>
+
+          {/* Contact section */}
+          {(location.phone || location.website) && (
+            <div className="mb-5">
+              <h3 className="text-white font-semibold mb-3">Contact</h3>
+              <div className="space-y-2">
+                {location.phone && (
+                  <a
+                    href={`tel:${String(location.phone).replace(/\s/g, '')}`}
+                    className="flex items-center gap-3 p-3 bg-neutral-800/50 rounded-xl text-neutral-300 hover:bg-neutral-700/50 transition-colors"
+                  >
+                    <Phone className="w-5 h-5 text-green-400 shrink-0" />
+                    <span className="text-sm">{String(location.phone)}</span>
+                  </a>
+                )}
+                {location.website && typeof location.website === 'string' && (
+                  <a
+                    href={location.website.startsWith('http') ? location.website : `https://${location.website}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 bg-neutral-800/50 rounded-xl text-neutral-300 hover:bg-neutral-700/50 transition-colors"
+                  >
+                    <Globe className="w-5 h-5 text-blue-400 shrink-0" />
+                    <span className="text-sm truncate">{location.website.replace(/^https?:\/\//, '')}</span>
+                    <ExternalLink className="w-4 h-4 shrink-0 ml-auto" />
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Opening hours - collapsible */}
+          {(openingHoursLines.length > 0 || openNow !== null) && (
+            <div className="mb-5">
+              <button
+                type="button"
+                onClick={() => setIsHoursOpen((o) => !o)}
+                className="w-full flex items-center justify-between text-left"
+              >
+                <h3 className="text-white font-semibold">Opening hours</h3>
+                <ChevronDown className={cn("w-5 h-5 text-neutral-400 transition-transform", isHoursOpen && "rotate-180")} />
+              </button>
+              {openNow !== null && (
+                <span className={cn(
+                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium mt-2",
+                  openNow ? "bg-green-500/20 text-green-400" : "bg-neutral-700 text-neutral-400"
+                )}>
+                  <span className="w-2 h-2 rounded-full bg-current" />
+                  {openNow ? 'Open Now' : 'Closed'}
+                </span>
+              )}
+              {isHoursOpen && openingHoursLines.length > 0 && (
+                <div className="mt-3 space-y-1 text-sm text-neutral-400">
+                  {openingHoursLines.map((line, i) => (
+                    <p key={i}>{line}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Facilities */}
+          <div className="mb-5">
+            <h3 className="text-white font-semibold mb-3">Facilities</h3>
+            <div className="flex flex-wrap gap-2">
+              {visibleFacilities.map((facility, i) => (
+                <span
+                  key={i}
+                  className="px-3 py-1.5 bg-neutral-800 rounded-full text-sm text-neutral-300"
+                >
+                  {facility ?? ''}
+                </span>
+              ))}
+              {facilitiesFiltered.length > 6 && !showAllFacilities && (
+                <button
+                  onClick={() => setShowAllFacilities(true)}
+                  className="px-3 py-1.5 bg-neutral-800 rounded-full text-sm text-green-500 hover:bg-neutral-700 transition-colors"
+                >
+                  +{facilitiesFiltered.length - 6} more
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Save / Unsave */}
+          {(onSave || onUnsave) && (
+            <div className="mb-4">
+              {isSaved ? (
+                <button
+                  type="button"
+                  onClick={onUnsave}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-red-500/50 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-colors"
+                >
+                  <Heart className="w-4 h-4 fill-current" />
+                  <span className="text-sm font-medium">Saved — tap to remove</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onSave}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-dashed border-neutral-600 text-neutral-300 rounded-xl hover:border-red-500 hover:text-red-400 hover:bg-red-500/5 transition-colors"
+                >
+                  <Heart className="w-4 h-4" />
+                  <span className="text-sm font-medium">Save place</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Add to route / Remove from route */}
+          {(onAddToRoute || onRemoveFromRoute) && (
+            <div className="mb-4">
+              {isInRoute ? (
+                <button
+                  type="button"
+                  onClick={onRemoveFromRoute}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-green-500/50 bg-green-500/10 text-green-500 rounded-xl hover:bg-green-500/20 transition-colors"
+                >
+                  <Route className="w-4 h-4" />
+                  <span className="text-sm font-medium">Remove from route</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onAddToRoute}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-dashed border-neutral-600 text-neutral-300 rounded-xl hover:border-green-500 hover:text-green-500 hover:bg-green-500/5 transition-colors"
+                >
+                  <Route className="w-4 h-4" />
+                  <span className="text-sm font-medium">Add to route</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Add to Trip - foundation for future trips feature */}
+          {onAddToTrip && (
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={onAddToTrip}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-dashed border-neutral-600 text-neutral-300 rounded-xl hover:border-amber-500 hover:text-amber-500 hover:bg-amber-500/5 transition-colors"
+              >
+                <Route className="w-4 h-4" />
+                <span className="text-sm font-medium">Add to trip</span>
+              </button>
+            </div>
+          )}
+
+          {/* Action buttons: Website, Call, Navigate (full width) */}
+          <div className="w-full grid grid-cols-2 gap-3 mb-6">
+            {location.website && typeof location.website === 'string' && (
+              <button
+                onClick={handleWebsite}
+                className="flex flex-col items-center justify-center gap-1.5 p-4 bg-neutral-800 rounded-xl hover:bg-neutral-700 transition-colors"
+              >
+                <Globe className="w-5 h-5 text-blue-400" />
+                <span className="text-xs text-neutral-300">Website</span>
+              </button>
+            )}
+            {location.phone && (
+              <button
+                onClick={handleCall}
+                className="flex flex-col items-center justify-center gap-1.5 p-4 bg-neutral-800 rounded-xl hover:bg-neutral-700 transition-colors"
+              >
+                <Phone className="w-5 h-5 text-green-400" />
+                <span className="text-xs text-neutral-300">Call</span>
+              </button>
+            )}
+            <button
+              onClick={handleNavigate}
+              className="col-span-2 flex flex-col items-center justify-center gap-1.5 p-4 bg-white rounded-xl hover:bg-neutral-100 transition-colors w-full"
+            >
+              <Navigation className="w-5 h-5 text-neutral-900" />
+              <span className="text-xs text-neutral-900 font-medium">Navigate</span>
+            </button>
+          </div>
+
+          {/* Reviews section - always visible */}
+          <div className="border-t border-neutral-800 pt-5">
+            <div className="flex items-center gap-2 text-white font-semibold mb-3">
+              <MessageSquare className="w-5 h-5" />
+              Reviews ({reviewsLoading ? '…' : reviews.length})
+            </div>
+
+            {/* View Google Reviews / Open Charge Map */}
+            <div className="flex flex-col gap-2">
+              {location.google_place_id && (
+                <a
+                  href={`https://www.google.com/maps/place/?q=place_id:${location.google_place_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 p-3 bg-neutral-800 rounded-xl text-neutral-300 hover:bg-neutral-700 transition-colors w-full"
+                >
+                  <img 
+                    src="https://www.google.com/favicon.ico" 
+                    alt="Google" 
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">View Google Reviews</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+              {location.type === 'ev_charger' && location.ocm_id && (
+                <a
+                  href={`https://openchargemap.org/site/poi/details/${location.ocm_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 p-3 bg-neutral-800 rounded-xl text-neutral-300 hover:bg-neutral-700 transition-colors w-full"
+                >
+                  <span className="text-sm">View on Open Charge Map</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
+
+            <div className="mt-4 space-y-4">
+              {/* Add review: form or button */}
+                {onSubmitReview && currentUserId ? (
+                  showReviewForm ? (
+                    <div className="p-4 bg-neutral-800/50 rounded-xl space-y-3">
+                      <p className="text-sm font-medium text-white">Your rating</p>
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => setReviewRating(n)}
+                            className="p-1 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                            aria-label={`${n} star${n !== 1 ? 's' : ''}`}
+                          >
+                            <Star
+                              className={cn(
+                                'w-8 h-8 transition-colors',
+                                n <= reviewRating ? 'text-yellow-500 fill-yellow-500' : 'text-neutral-600'
+                              )}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-sm font-medium text-white mt-2">Comment (optional)</p>
+                      <textarea
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        placeholder="Share your experience…"
+                        rows={3}
+                        className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                      />
+                      {reviewError && (
+                        <p className="text-sm text-red-400">{reviewError}</p>
+                      )}
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={reviewSubmitting}
+                          onClick={async () => {
+                            setReviewError(null);
+                            setReviewSubmitting(true);
+                            const result = await onSubmitReview(reviewRating, reviewComment);
+                            setReviewSubmitting(false);
+                            if (result.ok) {
+                              setShowReviewForm(false);
+                              setReviewComment('');
+                              setReviewRating(5);
+                            } else {
+                              setReviewError(result.error ?? 'Failed to submit');
+                            }
+                          }}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-medium rounded-xl"
+                        >
+                          <Send className="w-4 h-4" />
+                          Submit review
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowReviewForm(false);
+                            setReviewError(null);
+                          }}
+                          className="py-2.5 px-4 bg-neutral-700 hover:bg-neutral-600 text-neutral-300 rounded-xl"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowReviewForm(true)}
+                      className="w-full flex items-center justify-center gap-2 p-3 border border-dashed border-neutral-700 rounded-xl text-green-500 hover:border-green-500 hover:bg-green-500/5 transition-colors"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span className="text-sm font-medium">Add your review</span>
+                    </button>
+                  )
+                ) : (
+                  onSubmitReview && !currentUserId && (
+                    <p className="text-center text-neutral-500 text-sm py-2">Sign in to add a review</p>
+                  )
+                )}
+
+                {/* Reviews list */}
+                {reviewsLoading ? (
+                  <p className="text-center py-6 text-neutral-500 text-sm">Loading reviews…</p>
+                ) : reviews.length > 0 ? (
+                  reviews.map((review) => (
+                    <div
+                      key={review.id}
+                      className="p-4 bg-neutral-800/50 rounded-xl"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-neutral-700 flex items-center justify-center">
+                            <UserIcon className="w-4 h-4 text-neutral-400" />
+                          </div>
+                          <span className="text-sm font-medium text-white">{review.user_name}</span>
+                          {currentUserId && review.user_id === currentUserId && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">Your review</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-neutral-500">{formatDate(review.created_at)}</span>
+                          {onDeleteReview && currentUserId && review.user_id === currentUserId && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (window.confirm('Delete this review?')) {
+                                  await onDeleteReview(review.id);
+                                }
+                              }}
+                              className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-neutral-700 transition-colors"
+                              aria-label="Delete review"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 mb-2">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={cn(
+                              "w-3 h-3",
+                              i < review.rating ? "text-yellow-500 fill-yellow-500" : "text-neutral-600"
+                            )}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-sm text-neutral-300 leading-relaxed">{review.comment || 'No comment.'}</p>
+                      {review.photos.length > 0 && (
+                        <div className="flex gap-2 mt-3 overflow-x-auto">
+                          {review.photos.map((photo, i) => (
+                            <img
+                              key={i}
+                              src={photo}
+                              alt=""
+                              loading="lazy"
+                              className="w-16 h-16 rounded-lg object-cover"
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  !reviewsLoading && (
+                    <div className="text-center py-8 text-neutral-500 text-sm">
+                      No reviews yet. Be the first to share your experience!
+                    </div>
+                  )
+                )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

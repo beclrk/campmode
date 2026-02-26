@@ -1,0 +1,406 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		C0C06031A00982E129F3F3AD /* CampModeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5D2EDCAA36A3BAECD611DEE /* CampModeApp.swift */; };
+		23A4CA2E522374357CD78C5B /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94A32B5BCA5F5AF1544DCB0F /* Models.swift */; };
+		209F492C89CCD6221E0E6157 /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C03D1C7975020D6D437DA3A /* Utils.swift */; };
+		D7D7D169D90382F9703F7F03 /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61D87EC6F802C8B136F0B689 /* SupabaseService.swift */; };
+		D65CB240741621A4DDFF7C5C /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 066BCB5B8BF2364C13F45DDF /* LocationManager.swift */; };
+		94E59AA2038ED464C3319B84 /* GeocodingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CFD72BF1846542ED896FACF /* GeocodingService.swift */; };
+		E7D37BEC33DB106321D7B878 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BA70D7C688E518645222AF /* AuthViewModel.swift */; };
+		28E20B181093193F57C2A409 /* MapViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C57152A92C9B1383A6419CF9 /* MapViewModel.swift */; };
+		6CD7C86E5BA201BD7029DCDB /* SavedPlacesManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3024C6133483E214727CF7DD /* SavedPlacesManager.swift */; };
+		F3F036E400DC59BFDCF6DDA4 /* TripsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5827B0EF5B96C7794DCABF06 /* TripsViewModel.swift */; };
+		0B32C014C8969A3FAA68195E /* ReviewsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 585DFB13A27E72BA14E785CA /* ReviewsViewModel.swift */; };
+		D9D1C2FBF39AB418CB30ED9F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDA7852DEE8B8DDABAB4623A /* ContentView.swift */; };
+		127FC5D57599EC207CBDE65C /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71FD4733348319C0E622A33E /* HomeView.swift */; };
+		519959B0AAEE955E38E843B3 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E7FCB526D454F4975DB4E5A /* LoginView.swift */; };
+		C612DD60AE13E659535BA6D3 /* LocationListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68E91F8B3A44DAF5CD49EBF1 /* LocationListView.swift */; };
+		5D538E131765AB3BA9EA5222 /* SavedPlacesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AA6EB650B1E7AD0F9A4E46F /* SavedPlacesView.swift */; };
+		24C87A89BB8A3EF94EAF3053 /* TripsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC2B48F95A96374B43EDABC0 /* TripsView.swift */; };
+		736AF832653FEB67267CBC65 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3BB74B2F2D55AB79666BAF2 /* SettingsView.swift */; };
+		2A6B8EC16331FEE3949D227A /* CampMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49E44017922B277F31B137F4 /* CampMapView.swift */; };
+		1565F7F1C116365281808B15 /* FilterPillsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 393EECAF8CAD0672F676C0FA /* FilterPillsView.swift */; };
+		7AF2CCA592A6A77414C2A949 /* LocationDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07C584C9EA98BF55B78EF3A6 /* LocationDetailSheet.swift */; };
+		35C83213F349AB7C03891D79 /* RoutePlannerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9924BCA11AF440C37FAC06D0 /* RoutePlannerSheet.swift */; };
+		B894F6942FB328363EAEFF51 /* AddToTripSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31C49D11E16EE680B069411E /* AddToTripSheet.swift */; };
+		950218C7E47E51DA2FEE5A25 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4DE8A265EFF771CBBC9D933E /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		B5D2EDCAA36A3BAECD611DEE /* CampModeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CampModeApp.swift"; sourceTree = "<group>"; };
+		94A32B5BCA5F5AF1544DCB0F /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Models.swift"; sourceTree = "<group>"; };
+		9C03D1C7975020D6D437DA3A /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Utils.swift"; sourceTree = "<group>"; };
+		61D87EC6F802C8B136F0B689 /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SupabaseService.swift"; sourceTree = "<group>"; };
+		066BCB5B8BF2364C13F45DDF /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LocationManager.swift"; sourceTree = "<group>"; };
+		9CFD72BF1846542ED896FACF /* GeocodingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GeocodingService.swift"; sourceTree = "<group>"; };
+		E7BA70D7C688E518645222AF /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AuthViewModel.swift"; sourceTree = "<group>"; };
+		C57152A92C9B1383A6419CF9 /* MapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapViewModel.swift"; sourceTree = "<group>"; };
+		3024C6133483E214727CF7DD /* SavedPlacesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SavedPlacesManager.swift"; sourceTree = "<group>"; };
+		5827B0EF5B96C7794DCABF06 /* TripsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TripsViewModel.swift"; sourceTree = "<group>"; };
+		585DFB13A27E72BA14E785CA /* ReviewsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewsViewModel.swift"; sourceTree = "<group>"; };
+		EDA7852DEE8B8DDABAB4623A /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ContentView.swift"; sourceTree = "<group>"; };
+		71FD4733348319C0E622A33E /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView.swift"; sourceTree = "<group>"; };
+		2E7FCB526D454F4975DB4E5A /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LoginView.swift"; sourceTree = "<group>"; };
+		68E91F8B3A44DAF5CD49EBF1 /* LocationListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LocationListView.swift"; sourceTree = "<group>"; };
+		3AA6EB650B1E7AD0F9A4E46F /* SavedPlacesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SavedPlacesView.swift"; sourceTree = "<group>"; };
+		FC2B48F95A96374B43EDABC0 /* TripsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TripsView.swift"; sourceTree = "<group>"; };
+		A3BB74B2F2D55AB79666BAF2 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView.swift"; sourceTree = "<group>"; };
+		49E44017922B277F31B137F4 /* CampMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CampMapView.swift"; sourceTree = "<group>"; };
+		393EECAF8CAD0672F676C0FA /* FilterPillsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FilterPillsView.swift"; sourceTree = "<group>"; };
+		07C584C9EA98BF55B78EF3A6 /* LocationDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LocationDetailSheet.swift"; sourceTree = "<group>"; };
+		9924BCA11AF440C37FAC06D0 /* RoutePlannerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoutePlannerSheet.swift"; sourceTree = "<group>"; };
+		31C49D11E16EE680B069411E /* AddToTripSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AddToTripSheet.swift"; sourceTree = "<group>"; };
+		4DE8A265EFF771CBBC9D933E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		E98C98624C50C55C8A17C57E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D484296D28E6C50F7CD6EE36 /* CampMode.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CampMode.entitlements; sourceTree = "<group>"; };
+		CEA490DA5303DFBBCD15F215 /* CampMode.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CampMode.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		49E10FF1E76135617E53351A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		9ED84912983732BAE5BB96FD = {
+			isa = PBXGroup;
+			children = (
+				E2A46B83E3761CFCFCC4FB15 /* CampMode */,
+				540D59F088952D1205AD7A13 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		540D59F088952D1205AD7A13 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CEA490DA5303DFBBCD15F215 /* CampMode.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E2A46B83E3761CFCFCC4FB15 /* CampMode */ = {
+			isa = PBXGroup;
+			children = (
+				B5D2EDCAA36A3BAECD611DEE /* CampModeApp.swift */,
+				D2B099A774EAD276F29F6C1B /* Models */,
+				959A0D7DE6D4BBD81ED6C77A /* Services */,
+				58D9CE2023E16A382253B90B /* ViewModels */,
+				2FBAB951E15647199D5526CE /* Views */,
+				C098D1CF8055289C13F49AB2 /* Utilities */,
+				4DE8A265EFF771CBBC9D933E /* Assets.xcassets */,
+				E98C98624C50C55C8A17C57E /* Info.plist */,
+				D484296D28E6C50F7CD6EE36 /* CampMode.entitlements */,
+			);
+			path = CampMode;
+			sourceTree = "<group>";
+		};
+		D2B099A774EAD276F29F6C1B /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				94A32B5BCA5F5AF1544DCB0F /* Models.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		959A0D7DE6D4BBD81ED6C77A /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				61D87EC6F802C8B136F0B689 /* SupabaseService.swift */,
+				066BCB5B8BF2364C13F45DDF /* LocationManager.swift */,
+				9CFD72BF1846542ED896FACF /* GeocodingService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		58D9CE2023E16A382253B90B /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				E7BA70D7C688E518645222AF /* AuthViewModel.swift */,
+				C57152A92C9B1383A6419CF9 /* MapViewModel.swift */,
+				3024C6133483E214727CF7DD /* SavedPlacesManager.swift */,
+				5827B0EF5B96C7794DCABF06 /* TripsViewModel.swift */,
+				585DFB13A27E72BA14E785CA /* ReviewsViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		2FBAB951E15647199D5526CE /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				EDA7852DEE8B8DDABAB4623A /* ContentView.swift */,
+				71FD4733348319C0E622A33E /* HomeView.swift */,
+				2E7FCB526D454F4975DB4E5A /* LoginView.swift */,
+				68E91F8B3A44DAF5CD49EBF1 /* LocationListView.swift */,
+				3AA6EB650B1E7AD0F9A4E46F /* SavedPlacesView.swift */,
+				FC2B48F95A96374B43EDABC0 /* TripsView.swift */,
+				A3BB74B2F2D55AB79666BAF2 /* SettingsView.swift */,
+				97B6ED8B1F194EB16E28D6E6 /* Components */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		97B6ED8B1F194EB16E28D6E6 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				49E44017922B277F31B137F4 /* CampMapView.swift */,
+				393EECAF8CAD0672F676C0FA /* FilterPillsView.swift */,
+				07C584C9EA98BF55B78EF3A6 /* LocationDetailSheet.swift */,
+				9924BCA11AF440C37FAC06D0 /* RoutePlannerSheet.swift */,
+				31C49D11E16EE680B069411E /* AddToTripSheet.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		C098D1CF8055289C13F49AB2 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				9C03D1C7975020D6D437DA3A /* Utils.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		BB74EDEB369787B9CCF38C2A /* CampMode */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6E42371F0D51BFA297FBABC9 /* Build configuration list for PBXNativeTarget "CampMode" */;
+			buildPhases = (
+				04E201C2F32050921B5B9816 /* Sources */,
+				49E10FF1E76135617E53351A /* Frameworks */,
+				EF54E8B777226F971A107C31 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CampMode;
+			productName = CampMode;
+			productReference = CEA490DA5303DFBBCD15F215 /* CampMode.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		8F9E0988EB29E686E0ABEC88 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 2138FE2C2044E280D246B721 /* Build configuration list for PBXProject "CampMode" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 9ED84912983732BAE5BB96FD;
+			productRefGroup = 540D59F088952D1205AD7A13 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				BB74EDEB369787B9CCF38C2A /* CampMode */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		EF54E8B777226F971A107C31 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				950218C7E47E51DA2FEE5A25 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		04E201C2F32050921B5B9816 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0C06031A00982E129F3F3AD /* CampModeApp.swift in Sources */,
+				23A4CA2E522374357CD78C5B /* Models.swift in Sources */,
+				209F492C89CCD6221E0E6157 /* Utils.swift in Sources */,
+				D7D7D169D90382F9703F7F03 /* SupabaseService.swift in Sources */,
+				D65CB240741621A4DDFF7C5C /* LocationManager.swift in Sources */,
+				94E59AA2038ED464C3319B84 /* GeocodingService.swift in Sources */,
+				E7D37BEC33DB106321D7B878 /* AuthViewModel.swift in Sources */,
+				28E20B181093193F57C2A409 /* MapViewModel.swift in Sources */,
+				6CD7C86E5BA201BD7029DCDB /* SavedPlacesManager.swift in Sources */,
+				F3F036E400DC59BFDCF6DDA4 /* TripsViewModel.swift in Sources */,
+				0B32C014C8969A3FAA68195E /* ReviewsViewModel.swift in Sources */,
+				D9D1C2FBF39AB418CB30ED9F /* ContentView.swift in Sources */,
+				127FC5D57599EC207CBDE65C /* HomeView.swift in Sources */,
+				519959B0AAEE955E38E843B3 /* LoginView.swift in Sources */,
+				C612DD60AE13E659535BA6D3 /* LocationListView.swift in Sources */,
+				5D538E131765AB3BA9EA5222 /* SavedPlacesView.swift in Sources */,
+				24C87A89BB8A3EF94EAF3053 /* TripsView.swift in Sources */,
+				736AF832653FEB67267CBC65 /* SettingsView.swift in Sources */,
+				2A6B8EC16331FEE3949D227A /* CampMapView.swift in Sources */,
+				1565F7F1C116365281808B15 /* FilterPillsView.swift in Sources */,
+				7AF2CCA592A6A77414C2A949 /* LocationDetailSheet.swift in Sources */,
+				35C83213F349AB7C03891D79 /* RoutePlannerSheet.swift in Sources */,
+				B894F6942FB328363EAEFF51 /* AddToTripSheet.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		5507B45285C12642AF1DBF61 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASETTAGS_FLAGS = "";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		DF4AFF2B3C6A6CA135F35A1B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASETTAGS_FLAGS = "";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		DAB33BA7C9AD02BDC01B4DC5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CampMode/CampMode.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CampMode/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CampMode;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 2.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.campmode.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		904F066EC96BEC2B3AC27915 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CampMode/CampMode.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CampMode/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CampMode;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 2.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.campmode.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2138FE2C2044E280D246B721 /* Build configuration list for PBXProject "CampMode" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5507B45285C12642AF1DBF61 /* Debug */,
+				DF4AFF2B3C6A6CA135F35A1B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6E42371F0D51BFA297FBABC9 /* Build configuration list for PBXNativeTarget "CampMode" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DAB33BA7C9AD02BDC01B4DC5 /* Debug */,
+				904F066EC96BEC2B3AC27915 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = 8F9E0988EB29E686E0ABEC88 /* Project object */;
+}
