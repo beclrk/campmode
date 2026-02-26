@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hide scrollbars but keep functionality */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Touch-friendly scroll for location cards on mobile - swipe to scroll */
+.sheet-scroll {
+  overflow-y: scroll; /* scroll (not auto) so iOS enables momentum scrolling */
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+  /* Definite height comes from parent flex; this container must not grow past it */
+  min-height: 0;
+}
+
+/* Settings page: scrollable main area (fixed layout so height is viewport-based) */
+.settings-scroll {
+  overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+  min-height: 0;
+}
+
+/* Custom Leaflet marker styles */
+.leaflet-container {
+  background: #1a1a1a;
+  height: 100%;
+  width: 100%;
+}
+
+.custom-marker {
+  background: none;
+  border: none;
+}
+
+/* Smooth transitions */
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(10, 10, 10, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Safe area padding for mobile */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Minimum top padding so headers aren't flush with screen edge (desktop + mobile) */
+.safe-top-with-min {
+  padding-top: max(env(safe-area-inset-top, 0px), 1.5rem);
+}
+
+/* Reserve space for app promo banner only when it's visible (avoids black gap when dismissed on web) */
+:root {
+  --app-promo-banner-height: 72px;
+}
+
+.location-sheet-scroll-bottom {
+  padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
+}
+body.promo-banner-visible .location-sheet-scroll-bottom {
+  padding-bottom: calc(7rem + var(--app-promo-banner-height) + env(safe-area-inset-bottom, 0px));
+}
+
+.settings-scroll-bottom {
+  padding-bottom: calc(3rem + env(safe-area-inset-bottom, 0px));
+}
+body.promo-banner-visible .settings-scroll-bottom {
+  padding-bottom: calc(3rem + var(--app-promo-banner-height) + env(safe-area-inset-bottom, 0px));
+}
+
+.list-view-scroll-bottom {
+  padding-bottom: calc(3rem + env(safe-area-inset-bottom, 0px));
+}
+body.promo-banner-visible .list-view-scroll-bottom {
+  padding-bottom: calc(3rem + var(--app-promo-banner-height) + env(safe-area-inset-bottom, 0px));
+}
+
+/* Location sheet: sit above browser bottom bar (Chrome back/new tab etc.) */
+.location-sheet-wrapper {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 56px);
+}
+
+/* Location card: no bottom gap, stretch to bottom of screen */
+.location-sheet-full-bottom {
+  padding-bottom: 0;
+}
